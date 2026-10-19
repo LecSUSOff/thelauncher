@@ -1,9 +1,22 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:installed_apps/installed_apps.dart';
+import 'package:palette_generator/palette_generator.dart';
 
 void main() {
   runApp(const MyLauncherApp());
+}
+
+
+Future<Color> getIconColor(Uint8List iconBytes) async {
+  final palette = await PaletteGenerator.fromImageProvider(
+    MemoryImage(iconBytes),
+    maximumColorCount: 4,
+  );
+  
+  return palette.dominantColor?.color ?? Colors.grey.shade900;
 }
 
 class MyLauncherApp extends StatelessWidget {
@@ -13,7 +26,6 @@ class MyLauncherApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
       home: const LauncherHomeScreen(),
     );
   }
@@ -23,7 +35,6 @@ class LauncherHomeScreen extends StatelessWidget {
   const LauncherHomeScreen({super.key});
 
   Future<List<AppInfo>> _getApps() async {
-    // For a launcher, keep excludeSystemApps: false so Settings, Camera, Phone, etc. show up!
     return await InstalledApps.getInstalledApps(
       excludeSystemApps: false,
       excludeNonLaunchableApps: true,
@@ -48,43 +59,38 @@ class LauncherHomeScreen extends StatelessWidget {
 
             final apps = snapshot.data!;
 
-            return GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 20,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.8,
-              ),
+            return PageView.builder(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               itemCount: apps.length,
               itemBuilder: (context, index) {
-                final app = apps[index];
-
-                return GestureDetector(
-                  onTap: () => InstalledApps.startApp(app.packageName),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (app.icon != null)
-                        Image.memory(
-                          app.icon!,
-                          width: 50,
-                          height: 50,
-                        )
-                      else
-                        const Icon(Icons.android, size: 50),
-                      const SizedBox(height: 8),
-                      Text(
-                        app.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12),
-                        textAlign: TextAlign.center,
+                return GestureDetector( 
+                  child: Stack( 
+                    children: 
+                    [
+                      Positioned.fill(
+                      child: FutureBuilder<Color>(
+                        future: getIconColor(apps[index].icon!),
+                        builder: (context, snapshot) {
+                          // Use fallback/default color while it's still calculating
+                          final color = snapshot.data ?? Colors.black;
+                          return ColoredBox(color: color);
+                        },
                       ),
-                    ],
+                    ),
+
+                      Center(
+                        child: Image.memory(
+                          apps[index].icon!,
+                          width: 150,
+                          height: 150,
+                        ),
+                      ),
+                    ]
                   ),
+                  onTap: () => InstalledApps.startApp(apps[index].packageName),
                 );
-              },
+              }
             );
           },
         ),
