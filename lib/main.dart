@@ -3,11 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:palette_generator/palette_generator.dart';
+import 'package:flutter/services.dart';
 import 'home.dart';
 import 'applist.dart';
 
 void main() {
   runApp(const MyLauncherApp());
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+}
+
+const platform = MethodChannel('launcher/defaults');
+
+Future<List<String>> getDefaultPackageNames() async {
+  final Map<dynamic, dynamic> defaults = await platform.invokeMethod('getDefaults');
+  
+  return defaults.values.whereType<String>().toList();
 }
 
 class MyLauncherApp extends StatelessWidget {
@@ -33,31 +43,39 @@ class LauncherHomeScreen extends StatelessWidget {
     );
   }
 
+  Future<({List<AppInfo> allApps, List<AppInfo> pinnedApps})> _loadLauncherData() async {
+    final allApps = await _getApps();
+    final defaultPackages = await getDefaultPackageNames();
+
+    final appMap = {for (final app in allApps) app.packageName: app};
+    final pinned = defaultPackages
+        .map((pkg) => appMap[pkg])
+        .whereType<AppInfo>()
+        .toList();
+
+    return (allApps: allApps, pinnedApps: pinned);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: FutureBuilder<List<AppInfo>>(
-          future: _getApps(),
+        child: FutureBuilder(
+          future: _loadLauncherData(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
+            if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text('No apps found... weird'));
             }
-
-            final apps = snapshot.data!;
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final allApps = snapshot.data!.allApps;
+            final pinnedApps = snapshot.data!.pinnedApps;
 
             return PageView(
               children: [
-                Tab(
-                  child: HomePage(),
-                ),
-                Tab(
-                  child: AppList(apps: apps),
-                ),
+                HomePage(PinnedApps: pinnedApps),
+                AppList(apps: allApps),
               ] 
             );
           },

@@ -10,11 +10,12 @@ class AppList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
   return GridView.builder(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
       crossAxisCount: 4,
-      mainAxisSpacing: 20,
-      crossAxisSpacing: 10,
-      childAspectRatio: 0.8,
+      mainAxisSpacing: 5,
+      crossAxisSpacing: 5,
+      childAspectRatio: 1,
     ),
     itemCount: apps.length,
     itemBuilder: (context, index) {
@@ -28,11 +29,11 @@ class AppList extends StatelessWidget {
             if (app.icon != null)
               Image.memory(
                 app.icon!,
-                width: 50,
-                height: 50,
+                width: 48,
+                height: 48,
               )
             else
-              const Icon(Icons.android, size: 50),
+              const Icon(Icons.android, size: 48),
             const SizedBox(height: 8),
             Text(
               app.name,

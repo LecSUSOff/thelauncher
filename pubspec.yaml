@@ -40,6 +40,8 @@ dependencies:
   fluttertoast: ^10.0.2
   palette_generator: ^0.3.3+7
   animated_analog_clock: ^0.2.2
+  table_calendar: ^3.3.0
+  device_wallpaper_flutter: ^1.0.1
 
 dev_dependencies:
   flutter_test:
