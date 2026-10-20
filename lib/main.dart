@@ -1,22 +1,13 @@
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:palette_generator/palette_generator.dart';
+import 'home.dart';
+import 'applist.dart';
 
 void main() {
   runApp(const MyLauncherApp());
-}
-
-
-Future<Color> getIconColor(Uint8List iconBytes) async {
-  final palette = await PaletteGenerator.fromImageProvider(
-    MemoryImage(iconBytes),
-    maximumColorCount: 4,
-  );
-  
-  return palette.dominantColor?.color ?? Colors.grey.shade900;
 }
 
 class MyLauncherApp extends StatelessWidget {
@@ -59,38 +50,15 @@ class LauncherHomeScreen extends StatelessWidget {
 
             final apps = snapshot.data!;
 
-            return PageView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: apps.length,
-              itemBuilder: (context, index) {
-                return GestureDetector( 
-                  child: Stack( 
-                    children: 
-                    [
-                      Positioned.fill(
-                      child: FutureBuilder<Color>(
-                        future: getIconColor(apps[index].icon!),
-                        builder: (context, snapshot) {
-                          // Use fallback/default color while it's still calculating
-                          final color = snapshot.data ?? Colors.black;
-                          return ColoredBox(color: color);
-                        },
-                      ),
-                    ),
-
-                      Center(
-                        child: Image.memory(
-                          apps[index].icon!,
-                          width: 150,
-                          height: 150,
-                        ),
-                      ),
-                    ]
-                  ),
-                  onTap: () => InstalledApps.startApp(apps[index].packageName),
-                );
-              }
+            return PageView(
+              children: [
+                Tab(
+                  child: HomePage(),
+                ),
+                Tab(
+                  child: AppList(apps: apps),
+                ),
+              ] 
             );
           },
         ),

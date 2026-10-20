@@ -39,6 +39,7 @@ dependencies:
   equatable: ^2.0.2
   fluttertoast: ^10.0.2
   palette_generator: ^0.3.3+7
+  animated_analog_clock: ^0.2.2
 
 dev_dependencies:
   flutter_test:
