@@ -24,7 +24,6 @@ class _WallpaperViewerState extends State<WallpaperViewer> {
 
   Future<void> _getCurrentWallpaper() async {
     try {
-      // Get the current wallpaper bytes
       Uint8List? bytes = await DeviceWallpaperFlutter.getWallpaper();
       setState(() {
         _wallpaperBytes = bytes;
@@ -39,7 +38,7 @@ class _WallpaperViewerState extends State<WallpaperViewer> {
     return Scaffold(
       body: Center(
         child: _wallpaperBytes != null
-            ? Image.memory(_wallpaperBytes!) // Render the bytes directly
+            ? Image.memory(_wallpaperBytes!)
             : CircularProgressIndicator(),
       ),
     );
@@ -65,7 +64,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _getCurrentWallpaper() async {
     try {
-      // Get the current wallpaper bytes
       Uint8List? bytes = await DeviceWallpaperFlutter.getWallpaper();
       setState(() {
         _wallpaperBytes = bytes;
@@ -82,7 +80,7 @@ class _HomePageState extends State<HomePage> {
         Center(
           child: _wallpaperBytes != null
               ? Image.memory(_wallpaperBytes!, fit: BoxFit.cover,
-              width: double.infinity,   // force width
+              width: double.infinity,
     height: double.infinity,)
               : CircularProgressIndicator(),
         ),
@@ -139,7 +137,7 @@ class _HomePageState extends State<HomePage> {
               }).toList(),
             ),
 
-            const SizedBox(height: 24), // bottom navigation padding
+            const SizedBox(height: 24),
           ],
         ),
       ],
