@@ -8,43 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:device_wallpaper_flutter/device_wallpaper_flutter.dart';
 import 'dart:ui' as ui;
 
-class WallpaperViewer extends StatefulWidget {
-  @override
-  _WallpaperViewerState createState() => _WallpaperViewerState();
-}
-
-class _WallpaperViewerState extends State<WallpaperViewer> {
-  Uint8List? _wallpaperBytes;
-
-  @override
-  void initState() {
-    super.initState();
-    _getCurrentWallpaper();
-  }
-
-  Future<void> _getCurrentWallpaper() async {
-    try {
-      Uint8List? bytes = await DeviceWallpaperFlutter.getWallpaper();
-      setState(() {
-        _wallpaperBytes = bytes;
-      });
-    } catch (e) {
-      print("Failed to get wallpaper: $e");
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _wallpaperBytes != null
-            ? Image.memory(_wallpaperBytes!)
-            : CircularProgressIndicator(),
-      ),
-    );
-  }
-}
-
 class HomePage extends StatefulWidget {
   final List<AppInfo> PinnedApps;
   const HomePage({super.key, required this.PinnedApps});
@@ -57,49 +20,28 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _getCurrentWallpaper();
-  }
-
-  Uint8List? _wallpaperBytes;
-
-  Future<void> _getCurrentWallpaper() async {
-    try {
-      Uint8List? bytes = await DeviceWallpaperFlutter.getWallpaper();
-      setState(() {
-        _wallpaperBytes = bytes;
-      });
-    } catch (e) {
-      print("Failed to get wallpaper: $e");
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Center(
-          child: _wallpaperBytes != null
-              ? Image.memory(_wallpaperBytes!, fit: BoxFit.cover,
-              width: double.infinity,
-    height: double.infinity,)
-              : CircularProgressIndicator(),
-        ),
         Column(
           children: [
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(40),
                   child: BackdropFilter(
                     filter: ui.ImageFilter.blur(
                       sigmaX: 15,
                       sigmaY: 15,
-                    ), // blurs the wallpaper behind it
+                    ),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       color: Colors.white.withValues(
-                        alpha: 0.8,
+                        alpha: 0.75,
                       ),
                       child: PageView(
                         scrollDirection: Axis.horizontal,
