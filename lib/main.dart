@@ -5,6 +5,7 @@ import 'package:installed_apps/installed_apps.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:device_wallpaper_flutter/device_wallpaper_flutter.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
 import 'applist.dart';
 
@@ -34,6 +35,7 @@ class MyLauncherApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const LauncherHomeScreen(),
+      theme: ThemeData.dark(),
     );
   }
 }
@@ -47,11 +49,43 @@ class LauncherHomeScreen extends StatefulWidget {
 
 class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   Uint8List? _wallpaperBytes;
+  List<AppInfo> _pinnedApps = [];
 
   @override
   void initState() {
     super.initState();
     _getCurrentWallpaper();
+  }
+
+  Future<({List<AppInfo> allApps, List<AppInfo> pinnedApps})> _loadLauncherData() async {
+    final allApps = await _getApps();
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? savedPackages = prefs.getStringList('pinned_apps');
+    savedPackages ??= await getDefaultPackageNames();
+    final appMap = {for (final app in allApps) app.packageName: app};
+    final pinned = savedPackages
+        .map((pkg) => appMap[pkg])
+        .whereType<AppInfo>()
+        .toList();
+
+    return (allApps: allApps, pinnedApps: pinned);
+  }
+
+  void togglePinApp(AppInfo app) {
+    setState(() {
+      if (_pinnedApps.any((a) => a.packageName == app.packageName)) {
+        _pinnedApps.removeWhere((a) => a.packageName == app.packageName);
+      } else {
+        if (_pinnedApps.length < 5) _pinnedApps.add(app);
+      }
+    });
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setStringList(
+        'pinned_apps', 
+        _pinnedApps.map((a) => a.packageName).toList(),
+      );
+    });
   }
 
   Future<void> _getCurrentWallpaper() async {
@@ -71,20 +105,6 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
       excludeNonLaunchableApps: true,
       withIcon: true,
     );
-  }
-
-  Future<({List<AppInfo> allApps, List<AppInfo> pinnedApps})>
-  _loadLauncherData() async {
-    final allApps = await _getApps();
-    final defaultPackages = await getDefaultPackageNames();
-
-    final appMap = {for (final app in allApps) app.packageName: app};
-    final pinned = defaultPackages
-        .map((pkg) => appMap[pkg])
-        .whereType<AppInfo>()
-        .toList();
-
-    return (allApps: allApps, pinnedApps: pinned);
   }
 
   @override
@@ -115,11 +135,12 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
                     : CircularProgressIndicator(),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 0),
+                padding: const EdgeInsets.only(top: 50, bottom: 10),
                 child: PageView(
+                  physics: const BouncingScrollPhysics(),
                   children: [
-                    HomePage(PinnedApps: pinnedApps),
-                    AppList(apps: allApps),
+                    HomePage(pinnedApps: pinnedApps, onTogglePin: togglePinApp,),
+                    AppList(apps: allApps, pinnedApps: _pinnedApps, onTogglePin: togglePinApp,),
                   ],
                 ),
               ),
