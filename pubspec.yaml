@@ -44,6 +44,8 @@ dependencies:
   device_wallpaper_flutter: ^1.0.1
   shared_preferences: ^2.5.6
   flutter_media_controller: ^1.0.3
+  intl: ^0.20.3
+  smooth_page_indicator: ^3.0.0
 
 dev_dependencies:
   flutter_test:

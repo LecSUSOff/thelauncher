@@ -5,6 +5,10 @@ import 'package:installed_apps/app_info.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_media_controller/flutter_media_controller.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'dart:async';
 
 class HomePage extends StatefulWidget {
   final List<AppInfo> pinnedApps;
@@ -22,6 +26,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   MediaInfo? mediaInfo;
+  bool digitalClock = false;
+
+  final PageController _pageController = PageController();
 
   static const Color holoCyan = Color(0xFF33B5E5);
   static const Color holoSurface = Color(0xCC181B20);
@@ -30,6 +37,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _initMediaController();
+  }
+
+   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _initMediaController() async {
@@ -113,18 +126,6 @@ class _HomePageState extends State<HomePage> {
                           color: holoCyan.withValues(alpha: 0.22),
                           width: 1.0,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6),
-                          ),
-                          BoxShadow(
-                            color: holoCyan.withValues(alpha: 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 0),
-                          ),
-                        ],
                       ),
                       child: Column(
                         children: [
@@ -144,8 +145,24 @@ class _HomePageState extends State<HomePage> {
                             child: PageView(
                               scrollDirection: Axis.horizontal,
                               physics: const BouncingScrollPhysics(),
+                              controller: _pageController,
                               children: [
-                                const Center(child: AnimatedAnalogClock()),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      digitalClock = !digitalClock;
+                                    });
+                                    HapticFeedback.selectionClick();
+                                    HapticFeedback.selectionClick();
+                                  },
+                                  child: digitalClock
+                                      ? Center(
+                                          child: DigitalClock(),
+                                        )
+                                      : const Center(
+                                          child: AnimatedAnalogClock(),
+                                        ),
+                                ),
 
                                 Center(
                                   child: SingleChildScrollView(
@@ -406,7 +423,22 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
                           ),
-                        ],
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: SmoothPageIndicator(
+                              controller: _pageController,
+                              count: 3,
+                              effect: const ExpandingDotsEffect(
+                                activeDotColor: holoCyan,
+                                dotColor: Colors.white24,
+                                dotHeight: 6,
+                                dotWidth: 6,
+                                expansionFactor: 3.2,
+                                spacing: 6,
+                              ),
+                            ),
+                          ),
+                                              ],
                       ),
                     ),
                   ),
@@ -448,11 +480,16 @@ class _HomePageState extends State<HomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: widget.pinnedApps.map((app) {
                     return GestureDetector(
-                      onTap: () => InstalledApps.startApp(app.packageName),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        InstalledApps.startApp(app.packageName);
+                      },
                       onLongPress: () {
                         final bool isPinned = widget.pinnedApps.any(
                           (a) => a.packageName == app.packageName,
                         );
+
+                        HapticFeedback.heavyImpact();
 
                         showModalBottomSheet(
                           context: context,
@@ -506,6 +543,24 @@ class _HomePageState extends State<HomePage> {
                                         widget.onTogglePin(app);
                                       },
                                     ),
+                                    ListTile(
+                                      leading: Icon(
+                                        Icons.settings_rounded,
+                                        color: holoCyan,
+                                      ),
+                                      title: Text(
+                                        'See app settings',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        Navigator.pop(modalContext);
+                                        InstalledApps.openSettings(app.packageName);
+                                      },
+                                    ),
                                   ],
                                 ),
                               ),
@@ -525,6 +580,56 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ],
+    );
+  }
+}
+
+
+class DigitalClock extends StatefulWidget {
+  const DigitalClock({super.key});
+
+  @override
+  State<DigitalClock> createState() => _DigitalClockState();
+}
+
+class _DigitalClockState extends State<DigitalClock> {
+  late Timer _timer;
+  late String _currentTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTime();
+    // Update every second
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        _updateTime();
+      }
+    });
+  }
+
+  void _updateTime() {
+    setState(() {
+      _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel(); // Cancel timer when switched away to save battery
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _currentTime,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 65,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 2.0,
+      ),
     );
   }
 }

@@ -135,7 +135,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
                     : CircularProgressIndicator(),
               ),
               Padding(
-                padding: const EdgeInsets.only(top: 50, bottom: 10),
+                padding: const EdgeInsets.only(top: 50, bottom: 45),
                 child: PageView(
                   physics: const BouncingScrollPhysics(),
                   children: [
