@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:animated_analog_clock/animated_analog_clock.dart';
-import 'package:installed_apps/app_info.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_media_controller/flutter_media_controller.dart';
@@ -9,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'dart:async';
+import 'helpers.dart';
 
 class HomePage extends StatefulWidget {
   final List<AppInfo> pinnedApps;
@@ -155,13 +155,26 @@ class _HomePageState extends State<HomePage> {
                                     HapticFeedback.selectionClick();
                                     HapticFeedback.selectionClick();
                                   },
-                                  child: digitalClock
-                                      ? Center(
-                                          child: DigitalClock(),
-                                        )
-                                      : const Center(
-                                          child: AnimatedAnalogClock(),
+                                  child: Column(
+                                    children: [
+                                      const Spacer(),
+                                      AnimatedCrossFade(
+                                        firstChild: const Center(child: DigitalClock()),
+                                        secondChild: const Center(child: AnimatedAnalogClock()),
+                                        crossFadeState: digitalClock 
+                                            ? CrossFadeState.showFirst 
+                                            : CrossFadeState.showSecond,
+                                        duration: const Duration(milliseconds: 300),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        "Tap to change to ${digitalClock? "analog" : "digital"} clock",
+                                        style: TextStyle(
+                                          color: Colors.grey
                                         ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
 
                                 Center(
@@ -449,7 +462,7 @@ class _HomePageState extends State<HomePage> {
             const Spacer(),
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 15),
               child: Container(
                 height: 1.5,
                 decoration: BoxDecoration(
@@ -484,90 +497,14 @@ class _HomePageState extends State<HomePage> {
                         HapticFeedback.lightImpact();
                         InstalledApps.startApp(app.packageName);
                       },
-                      onLongPress: () {
-                        final bool isPinned = widget.pinnedApps.any(
-                          (a) => a.packageName == app.packageName,
-                        );
-
-                        HapticFeedback.heavyImpact();
-
-                        showModalBottomSheet(
-                          context: context,
-                          backgroundColor: const Color(0xFF1E2228),
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                            side: BorderSide(
-                              color: Color(0x3333B5E5),
-                              width: 1,
-                            ),
+                      onLongPress: () => showAppContextMenu(
+                          context,
+                          app: app,
+                          isPinned: widget.pinnedApps.any(
+                            (a) => a.packageName == app.packageName,
                           ),
-                          builder: (modalContext) {
-                            return SafeArea(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 36,
-                                      height: 4,
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      decoration: BoxDecoration(
-                                        color: holoCyan.withValues(alpha: 0.5),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                    ),
-                                    ListTile(
-                                      leading: Icon(
-                                        isPinned
-                                            ? Icons.push_pin_rounded
-                                            : Icons.push_pin_outlined,
-                                        color: holoCyan,
-                                      ),
-                                      title: Text(
-                                        isPinned
-                                            ? 'Unpin from Dock'
-                                            : 'Pin to Dock',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        Navigator.pop(modalContext);
-                                        widget.onTogglePin(app);
-                                      },
-                                    ),
-                                    ListTile(
-                                      leading: Icon(
-                                        Icons.settings_rounded,
-                                        color: holoCyan,
-                                      ),
-                                      title: Text(
-                                        'See app settings',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                      onTap: () {
-                                        Navigator.pop(modalContext);
-                                        InstalledApps.openSettings(app.packageName);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                          onTogglePin: widget.onTogglePin,
+                        ),
                       child: Padding(
                         padding: const EdgeInsets.all(4),
                         child: _buildDockIcon(app),
