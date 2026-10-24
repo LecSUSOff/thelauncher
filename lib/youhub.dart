@@ -156,7 +156,7 @@ class _YouHubState extends State<YouHub> {
     if (code <= 82) return "Showers";
     return "Thunderstorm";
   }
-
+ 
   IconData _getWeatherIcon(int code) {
     if (code == 0) return Icons.wb_sunny_rounded;
     if (code <= 3) return Icons.wb_cloudy_rounded;
@@ -167,6 +167,14 @@ class _YouHubState extends State<YouHub> {
     return Icons.flash_on_rounded;
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 23 || hour < 4) return "Staying up late?";
+    if (hour < 12) return "Good Morning!";
+    if (hour < 17) return "Good Afternoon!";
+    return "Good Evening!";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -175,10 +183,10 @@ class _YouHubState extends State<YouHub> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(24, 20, 24, 8),
               child: Text(
-                "You Hub",
+                _getGreeting(),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 36,
