@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
 import 'applist.dart';
+import 'youhub.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,9 @@ class LauncherHomeScreen extends StatefulWidget {
 class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   Uint8List? _wallpaperBytes;
   List<AppInfo> _pinnedApps = [];
+  final PageController _rootPageController = PageController(
+      initialPage: 1,
+    );
 
   @override
   void initState() {
@@ -137,8 +141,10 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 50, bottom: 45),
                 child: PageView(
+                  controller: _rootPageController,
                   physics: const BouncingScrollPhysics(),
                   children: [
+                    YouHub(),
                     HomePage(pinnedApps: pinnedApps, onTogglePin: togglePinApp,),
                     AppList(apps: allApps, pinnedApps: _pinnedApps, onTogglePin: togglePinApp,),
                   ],
