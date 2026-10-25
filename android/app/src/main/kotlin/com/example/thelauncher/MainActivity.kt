@@ -1,3 +1,4 @@
+package com.example.thelauncher
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
