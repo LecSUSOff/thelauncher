@@ -49,6 +49,7 @@ class LauncherHomeScreen extends StatefulWidget {
 }
 
 class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
+  static const homeChannel = MethodChannel('launcher/home_intent');
   Uint8List? _wallpaperBytes;
   List<AppInfo> _pinnedApps = [];
   List<String> _userWidgets = [];
@@ -60,6 +61,18 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   void initState() {
     super.initState();
     _getCurrentWallpaper();
+
+    homeChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onHomePressed') {
+        if (_rootPageController.hasClients && _rootPageController.page != 1) {
+          _rootPageController.animateToPage(
+            1,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      }
+    });
   }
 
   Future<({List<AppInfo> allApps, List<AppInfo> pinnedApps, List<String> savedWidgets})> _loadLauncherData() async {
