@@ -51,6 +51,7 @@ class LauncherHomeScreen extends StatefulWidget {
 class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   Uint8List? _wallpaperBytes;
   List<AppInfo> _pinnedApps = [];
+  List<String> _userWidgets = [];
   final PageController _rootPageController = PageController(
       initialPage: 1,
     );
@@ -61,18 +62,46 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
     _getCurrentWallpaper();
   }
 
-  Future<({List<AppInfo> allApps, List<AppInfo> pinnedApps})> _loadLauncherData() async {
+  Future<({List<AppInfo> allApps, List<AppInfo> pinnedApps, List<String> savedWidgets})> _loadLauncherData() async {
     final allApps = await _getApps();
     final prefs = await SharedPreferences.getInstance();
     List<String>? savedPackages = prefs.getStringList('pinned_apps');
+    List<String>? savedWidgets = prefs.getStringList('saved_widgets');
     savedPackages ??= await getDefaultPackageNames();
+    savedWidgets ??= [];
     final appMap = {for (final app in allApps) app.packageName: app};
     final pinned = savedPackages
         .map((pkg) => appMap[pkg])
         .whereType<AppInfo>()
         .toList();
 
-    return (allApps: allApps, pinnedApps: pinned);
+    return (allApps: allApps, pinnedApps: pinned, savedWidgets: savedWidgets);
+  }
+
+  void saveWidget(String widget) {
+    setState(() {
+      _userWidgets.add(widget);
+    });
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setStringList(
+        'saved_widgets', 
+        _userWidgets,
+      );
+    });
+  }
+
+  void removeWidget(String widget) {
+    setState(() {
+      _userWidgets.remove(widget);
+    });
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setStringList(
+        'saved_widgets', 
+        _userWidgets,
+      );
+    });
   }
 
   void togglePinApp(AppInfo app) {
@@ -125,6 +154,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
           }
           final allApps = snapshot.data!.allApps;
           final pinnedApps = snapshot.data!.pinnedApps;
+          final userWidgets = snapshot.data!.savedWidgets;
 
           return Stack(
             children: [
@@ -145,7 +175,13 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
                   physics: const BouncingScrollPhysics(),
                   children: [
                     YouHub(),
-                    HomePage(pinnedApps: pinnedApps, onTogglePin: togglePinApp,),
+                    HomePage(
+                      pinnedApps: pinnedApps,
+                      onTogglePin: togglePinApp,
+                      userWidgets: userWidgets,
+                      onAddWidget: saveWidget,
+                      onRemoveWidget: removeWidget,
+                    ),
                     AppList(apps: allApps, pinnedApps: _pinnedApps, onTogglePin: togglePinApp,),
                   ],
                 ),

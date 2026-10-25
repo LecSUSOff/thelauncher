@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:flutter/services.dart';
 import 'package:installed_apps/installed_apps.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 void showAppContextMenu(
   BuildContext context, {
@@ -49,4 +50,12 @@ void showAppContextMenu(
       );
     },
   );
+}
+
+
+Widget HtmlWidgetRenderer(String html) {
+  WebViewController controller = WebViewController()
+    ..setJavaScriptMode(JavaScriptMode.unrestricted)
+    ..loadHtmlString(html);
+  return WebViewWidget(controller: controller);
 }
