@@ -171,21 +171,31 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
 
           return Stack(
             children: [
-              Center(
-                child: _wallpaperBytes != null
-                    ? Image.memory(
-                        _wallpaperBytes!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      )
-                    : CircularProgressIndicator(),
-              ),
-              Padding(
+              Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _rootPageController,
+                    builder: (context, child) {
+                      final double page = _rootPageController.hasClients ? (_rootPageController.page ?? 1.0) : 1.0;
+                      final double offset = (1.0 - page) * 35.0;
+
+                      return Transform.translate(
+                        offset: Offset(offset, 0),
+                        child: Transform.scale(
+                          scale: 1.15,
+                          child: Image.memory(
+                            _wallpaperBytes!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                              Padding(
                 padding: const EdgeInsets.only(top: 50, bottom: 45),
                 child: GestureDetector(
                   onVerticalDragUpdate: (details) {
-                    if (details.primaryDelta! > 5) {
+                    if (details.primaryDelta! > 2) {
                       homeChannel.invokeMethod('openNotifications');
                     }
                   },
