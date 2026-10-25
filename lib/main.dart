@@ -183,20 +183,31 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 50, bottom: 45),
-                child: PageView(
-                  controller: _rootPageController,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    YouHub(),
-                    HomePage(
-                      pinnedApps: pinnedApps,
-                      onTogglePin: togglePinApp,
-                      userWidgets: userWidgets,
-                      onAddWidget: saveWidget,
-                      onRemoveWidget: removeWidget,
-                    ),
-                    AppList(apps: allApps, pinnedApps: _pinnedApps, onTogglePin: togglePinApp,),
-                  ],
+                child: GestureDetector(
+                  onVerticalDragUpdate: (details) {
+                    if (details.primaryDelta! > 5) {
+                      homeChannel.invokeMethod('openNotifications');
+                    }
+                  },
+                  child: PageView(
+                    controller: _rootPageController,
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      YouHub(),
+                      HomePage(
+                        pinnedApps: pinnedApps,
+                        onTogglePin: togglePinApp,
+                        userWidgets: userWidgets,
+                        onAddWidget: saveWidget,
+                        onRemoveWidget: removeWidget,
+                      ),
+                      AppList(
+                        apps: allApps, 
+                        pinnedApps: _pinnedApps, 
+                        onTogglePin: togglePinApp,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
