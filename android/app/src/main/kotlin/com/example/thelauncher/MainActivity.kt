@@ -1,5 +1,3 @@
-package com.example.thelauncher
-
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -11,14 +9,18 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "launcher/defaults"
+    private val HOME_CHANNEL = "launcher/home_intent" // 1. New channel name
+    private var homeMethodChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // 2. Set up the home channel
+        homeMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HOME_CHANNEL)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "getDefaults") {
                 val pm = packageManager
-                
                 fun resolve(intent: Intent): String? = 
                     pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
 
@@ -32,6 +34,15 @@ class MainActivity: FlutterActivity() {
             } else {
                 result.notImplemented()
             }
+        }
+    }
+
+    // 3. Catch the Home Button / Swipe-Up gesture!
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
+            // Tell Flutter the home button was pressed!
+            homeMethodChannel?.invokeMethod("onHomePressed", null)
         }
     }
 }
