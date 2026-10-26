@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -75,12 +76,37 @@ class _YouHubState extends State<YouHub> {
   // --- SMART FACT INTEGRATION ---
   Future<String> _fetchDailyFact() async {
     try {
-      final res = await http.get(Uri.parse('https://uselessfacts.jsph.pl/api/v2/facts/random')).timeout(const Duration(seconds: 5));
+      final res = await http.get(Uri.parse('https://uselessfacts.jsph.pl/api/v2/facts/random')).timeout(const Duration(seconds: 2));
       if (res.statusCode == 200) {
         return json.decode(res.body)['text'];
       }
     } catch (_) {}
-    return "The first computer mouse was invented by Douglas Engelbart in 1964 and consisted of a wooden shell with two metal wheels.";
+    return "CandyOS can find facts even with no Internet. Trust me... Ummm... ${getUselessFactNoInternet()}";
+  }
+
+  String getUselessFactNoInternet() {
+    List<String> facts = [
+      "You are the best <3",
+      "The name CandyOS goes back to OG android release names. Pretty cool huh",
+      "Okay, stop messing around and turn on WiFi or something",
+      "Nothing starts with the letter N and ends with the letter G... Carl has none of those letters tho... weird",
+      "Developer told his doctor that he broke his arm in two places, so the doctor told him to stop going to those places.",
+      "Android robot is terrified of elevators, so it's going to start taking steps to avoid them. Candy has no way of avoiding them which results in it having smoother animations",
+      "They say lightning never strikes the same place twice. So don't buy iPhone 14 or older. Just saying.",
+      "The new Apple car was canceled because they couldn't figure out how to install Windows.\n\nThis one is overused, isn't it",
+      "This one will be funny I swear.\n\n- Knock-ckock\n- Who's there\n- Я(Ya)\n- Ya who?\n- YAHOOOOOOOO OUOU",
+      "Pulling down to refresh again isn't going to fix your router. Go unplug it and plug it back in like a civilized person.",
+      "Swiping down harder won't create 5G out of thin air. You've pulled this feed at least three times already. I can see you.\n\nP.S. Okay, maybe not \"See you\", we are not Google after all\n\nP.P.S. Don't sue us",
+      "You turned on Airplane Mode on purpose just to see what would happen here, didn't you?",
+      "We wanted to build an AI to write these facts, but apparently it's not cool anymore\n\nI'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy"
+    ];
+
+
+    final random = Random();
+
+    final fact = facts[random.nextInt(facts.length)];
+
+    return fact;
   }
 
   String _getWeatherCondition(int code) {
@@ -161,7 +187,7 @@ class _YouHubState extends State<YouHub> {
                                   
                                   // 1. LIVE WEATHER
                                   HoloSection(
-                                    title: "WEATHER",
+                                    title: "Weather",
                                     icon: Icons.cloud_outlined,
                                     showDivider: true,
                                     child: FutureBuilder(
@@ -172,7 +198,7 @@ class _YouHubState extends State<YouHub> {
                                         }
                                         final data = snapshot.data;
                                         if (data == null) {
-                                          return const Text("Weather unavailable", style: TextStyle(color: Colors.white70));
+                                          return const Text("Weather unavailable, either something happerned to our API provider (pray it's not that) or you have no Interanet (in that case, check out fun fact)", style: TextStyle(color: Colors.white70));
                                         }
                                         return Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
