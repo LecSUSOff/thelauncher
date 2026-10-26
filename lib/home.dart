@@ -3,14 +3,18 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter/material.dart';
 import 'package:animated_analog_clock/animated_analog_clock.dart';
 import 'package:installed_apps/app_info.dart';
-import 'package:installed_apps/installed_apps.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_media_controller/flutter_media_controller.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'dart:async';
 import 'helpers.dart';
+import 'core/constants.dart';
+import 'core/services/app_service.dart';
+import 'core/services/media_service.dart';
+import 'widgets/common/app_icon.dart';
+import 'widgets/digital_clock.dart';
+import 'widgets/app_context_menu.dart';
 
 class HomePage extends StatefulWidget {
   final List<AppInfo> pinnedApps;
@@ -38,8 +42,7 @@ class _HomePageState extends State<HomePage> {
 
   final PageController _pageController = PageController();
 
-  static const Color holoCyan = Color(0xFF33B5E5);
-  static const Color holoSurface = Color(0xCC181B20);
+  // Using AppColors constants
 
   @override
   void initState() {
@@ -54,25 +57,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _initMediaController() async {
-    try {
-      try {
-        await FlutterMediaController.getCurrentMediaInfo();
-      } catch (e) {
-        await FlutterMediaController.requestPermissions();
-      }
-      final info = await FlutterMediaController.getCurrentMediaInfo();
-      if (mounted) {
-        setState(() {
-          mediaInfo = info;
-        });
-      }
-    } catch (e) {
-      debugPrint("Media Controller Error: $e");
+    final info = await MediaService.getCurrentMediaInfo();
+    if (mounted) {
+      setState(() {
+        mediaInfo = info;
+      });
     }
   }
 
   Future<void> _refreshMedia() async {
-    final info = await FlutterMediaController.getCurrentMediaInfo();
+    final info = await MediaService.getCurrentMediaInfo();
     if (mounted) {
       setState(() {
         mediaInfo = info;
@@ -89,7 +83,7 @@ class _HomePageState extends State<HomePage> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.black87,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Code Widget", style: TextStyle(color: holoCyan)),
+        title: const Text("Code Widget", style: TextStyle(color: AppColors.holoCyan)),
         content: TextField(
           controller: htmlController,
           maxLines: 8,
@@ -108,7 +102,7 @@ class _HomePageState extends State<HomePage> {
             child: const Text("Cancel", style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: holoCyan),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.holoCyan),
             onPressed: () {
               if (htmlController.text.trim().isNotEmpty) {
                 widget.onAddWidget(htmlController.text);
@@ -137,7 +131,7 @@ class _HomePageState extends State<HomePage> {
             const Text("Add Custom Widget", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
-              leading: const Icon(Icons.code_rounded, color: holoCyan),
+              leading: const Icon(Icons.code_rounded, color: AppColors.holoCyan),
               title: const Text("Write HTML Code", style: TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(context);
@@ -161,7 +155,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: holoCyan)),
+            child: const Text("Cancel", style: TextStyle(color: AppColors.holoCyan)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -177,34 +171,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDockIcon(AppInfo app) {
-    if (app.icon != null) {
-      return Stack(
-        alignment: Alignment.center,
-        children: [
-          Transform.translate(
-            offset: const Offset(0, 3.5),
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
-              child: Image.memory(
-                app.icon!,
-                width: 50,
-                height: 50,
-                color: Colors.black.withValues(alpha: 0.45),
-                colorBlendMode: BlendMode.srcIn,
-              ),
-            ),
-          ),
-          Image.memory(app.icon!, width: 50, height: 50),
-        ],
-      );
-    } else {
-      return const Icon(
-        Icons.android_rounded,
-        size: 50,
-        color: holoCyan,
-        shadows: [Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 3.5))],
-      );
-    }
+    return AppIcon(app: app);
   }
 
   @override
@@ -222,10 +189,10 @@ class _HomePageState extends State<HomePage> {
                     filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: holoSurface,
+                        color: AppColors.holoSurface,
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: holoCyan.withValues(alpha: 0.22),
+                          color: AppColors.holoCyan.withValues(alpha: 0.22),
                           width: 1.0,
                         ),
                       ),
@@ -235,7 +202,7 @@ class _HomePageState extends State<HomePage> {
                             height: 2,
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Colors.transparent, holoCyan, Colors.transparent],
+                                colors: [Colors.transparent, AppColors.holoCyan, Colors.transparent],
                               ),
                             ),
                           ),
@@ -260,7 +227,7 @@ class _HomePageState extends State<HomePage> {
                                         firstChild: const Center(child: DigitalClock()),
                                         secondChild: const Center(child: AnimatedAnalogClock()),
                                         crossFadeState: digitalClock ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                                        duration: const Duration(milliseconds: 300),
+                                        duration: AppDurations.fast,
                                       ),
                                       const Spacer(),
                                       Text(
@@ -320,7 +287,7 @@ class _HomePageState extends State<HomePage> {
                                               Container(
                                                 decoration: BoxDecoration(
                                                   borderRadius: BorderRadius.circular(12),
-                                                  border: Border.all(color: holoCyan.withValues(alpha: 0.3), width: 1),
+                                                  border: Border.all(color: AppColors.holoCyan.withValues(alpha: 0.3), width: 1),
                                                   boxShadow: [
                                                     BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12, offset: const Offset(0, 4)),
                                                   ],
@@ -337,14 +304,14 @@ class _HomePageState extends State<HomePage> {
                                                             width: 86,
                                                             height: 86,
                                                             color: Colors.white.withValues(alpha: 0.05),
-                                                            child: const Icon(Icons.music_note_rounded, size: 44, color: holoCyan),
+                                                            child: const Icon(Icons.music_note_rounded, size: 44, color: AppColors.holoCyan),
                                                           ),
                                                         )
                                                       : Container(
                                                           width: 86,
                                                           height: 86,
                                                           color: Colors.white.withValues(alpha: 0.05),
-                                                          child: const Icon(Icons.music_note_rounded, size: 44, color: holoCyan),
+                                                          child: const Icon(Icons.music_note_rounded, size: 44, color: AppColors.holoCyan),
                                                         ),
                                                 ),
                                               ),
@@ -360,7 +327,7 @@ class _HomePageState extends State<HomePage> {
                                                 mediaInfo!.artist.toUpperCase(),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.1, color: holoCyan),
+                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.1, color: AppColors.holoCyan),
                                               ),
                                               const SizedBox(height: 14),
                                               Row(
@@ -371,16 +338,16 @@ class _HomePageState extends State<HomePage> {
                                                     icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 30),
                                                     onPressed: () async {
                                                       HapticFeedback.lightImpact();
-                                                      await FlutterMediaController.previousTrack();
+                                                      await MediaService.previousTrack();
                                                       await _refreshMedia();
                                                     },
                                                   ),
                                                   const SizedBox(width: 14),
                                                   Container(
                                                     decoration: BoxDecoration(
-                                                      color: holoCyan,
+                                                      color: AppColors.holoCyan,
                                                       shape: BoxShape.circle,
-                                                      boxShadow: [BoxShadow(color: holoCyan.withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)],
+                                                      boxShadow: [BoxShadow(color: AppColors.holoCyan.withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 1)],
                                                     ),
                                                     child: IconButton(
                                                       splashRadius: 28,
@@ -391,7 +358,7 @@ class _HomePageState extends State<HomePage> {
                                                       ),
                                                       onPressed: () async {
                                                         HapticFeedback.mediumImpact();
-                                                        await FlutterMediaController.togglePlayPause();
+                                                        await MediaService.playPause();
                                                         await _refreshMedia();
                                                       },
                                                     ),
@@ -402,7 +369,7 @@ class _HomePageState extends State<HomePage> {
                                                     icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 30),
                                                     onPressed: () async {
                                                       HapticFeedback.lightImpact();
-                                                      await FlutterMediaController.nextTrack();
+                                                      await MediaService.nextTrack();
                                                       await _refreshMedia();
                                                     },
                                                   ),
@@ -446,9 +413,9 @@ class _HomePageState extends State<HomePage> {
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             color: Colors.white.withValues(alpha: 0.05),
-                                            border: Border.all(color: holoCyan.withValues(alpha: 0.5), width: 1.5),
+                                            border: Border.all(color: AppColors.holoCyan.withValues(alpha: 0.5), width: 1.5),
                                           ),
-                                          child: const Icon(Icons.add_rounded, size: 40, color: holoCyan),
+                                          child: const Icon(Icons.add_rounded, size: 40, color: AppColors.holoCyan),
                                         ),
                                         const SizedBox(height: 16),
                                         Text(
@@ -474,7 +441,7 @@ class _HomePageState extends State<HomePage> {
                               // 3 Defaults + N Custom Widgets + 1 Add Button
                               count: 4 + widget.userWidgets.length, 
                               effect: const ExpandingDotsEffect(
-                                activeDotColor: holoCyan,
+                                activeDotColor: AppColors.holoCyan,
                                 dotColor: Colors.white24,
                                 dotHeight: 6,
                                 dotWidth: 6,
@@ -500,13 +467,13 @@ class _HomePageState extends State<HomePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      holoCyan.withValues(alpha: 0.1),
-                      holoCyan.withValues(alpha: 1),
-                      holoCyan.withValues(alpha: 0.1),
+                      AppColors.holoCyan.withValues(alpha: 0.1),
+                      AppColors.holoCyan.withValues(alpha: 1),
+                      AppColors.holoCyan.withValues(alpha: 0.1),
                     ],
                   ),
                   boxShadow: [
-                    BoxShadow(color: holoCyan.withValues(alpha: 0.3), blurRadius: 6, spreadRadius: 0.5),
+                    BoxShadow(color: AppColors.holoCyan.withValues(alpha: 0.3), blurRadius: 6, spreadRadius: 0.5),
                   ],
                 ),
               ),
@@ -523,11 +490,11 @@ class _HomePageState extends State<HomePage> {
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        InstalledApps.startApp(app.packageName);
+                        AppService.launchApp(app.packageName);
                       },
                       onLongPress: () {
                         HapticFeedback.mediumImpact();
-                        showAppContextMenu(
+                        AppContextMenu.show(
                           context,
                           app: app,
                           isPinned: widget.pinnedApps.any((a) => a.packageName == app.packageName),
@@ -550,48 +517,4 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class DigitalClock extends StatefulWidget {
-  const DigitalClock({super.key});
-
-  @override
-  State<DigitalClock> createState() => _DigitalClockState();
-}
-
-class _DigitalClockState extends State<DigitalClock> {
-  late Timer _timer;
-  late String _currentTime;
-
-  @override
-  void initState() {
-    super.initState();
-    _updateTime();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) _updateTime();
-    });
-  }
-
-  void _updateTime() {
-    setState(() {
-      _currentTime = DateFormat('HH:mm:ss').format(DateTime.now());
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      _currentTime,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 65,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 2.0,
-      ),
-    );
-  }
-}
+// DigitalClock moved to widgets/digital_clock.dart

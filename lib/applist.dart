@@ -1,37 +1,23 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
-import 'package:installed_apps/installed_apps.dart';
 import 'package:flutter/services.dart';
 import 'helpers.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:math_expressions/math_expressions.dart' hide Stack;
 import 'smartSearch.dart';
 import 'dart:async';
+import 'core/constants.dart';
+import 'core/services/app_service.dart';
+import 'core/utils/app_utils.dart';
+import 'core/utils/url_utils.dart';
+import 'widgets/common/app_icon.dart';
+import 'widgets/app_context_menu.dart';
 
 String? tryCalculate(String input) {
-  if (!input.contains(RegExp(r'[\+\-\*\/\^]'))) return null;
-
-  try {
-    Parser p = Parser();
-    Expression exp = p.parse(input);
-    double result = exp.evaluate(EvaluationType.REAL, ContextModel());
-
-    return result % 1 == 0
-        ? result.toInt().toString()
-        : result.toStringAsFixed(2);
-  } catch (e) {
-    return null;
-  }
+  return AppUtils.tryCalculate(input);
 }
 
 void searchTheWeb(String query) async {
-  final Uri url = Uri.parse(
-    'https://www.google.com/search?q=${Uri.encodeComponent(query)}',
-  );
-  if (await canLaunchUrl(url)) {
-    await launchUrl(url, mode: LaunchMode.externalApplication);
-  }
+  await UrlUtils.searchTheWeb(query);
 }
 
 class AppList extends StatefulWidget {
@@ -52,8 +38,7 @@ class AppList extends StatefulWidget {
 
 class _AppListState extends State<AppList> {
   final TextEditingController _searchController = TextEditingController();
-  static const Color holoCyan = Color(0xFF33B5E5);
-  static const Color holoSurface = Color(0xCC181B20);
+  // Using AppColors constants
 
   String _searchQuery = '';
   Timer? _debounce;
@@ -78,35 +63,7 @@ class _AppListState extends State<AppList> {
   }
 
   Widget _buildAppIcon(AppInfo app) {
-    if (app.icon == null) {
-      return const Icon(
-        Icons.android_rounded,
-        size: 50,
-        color: holoCyan,
-        shadows: [
-          Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 3.5)),
-        ],
-      );
-    }
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Transform.translate(
-          offset: const Offset(0, 3.5),
-          child: ImageFiltered(
-            imageFilter: ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
-            child: Image.memory(
-              app.icon!,
-              width: 50,
-              height: 50,
-              color: Colors.black.withValues(alpha: 0.45),
-              colorBlendMode: BlendMode.srcIn,
-            ),
-          ),
-        ),
-        Image.memory(app.icon!, width: 50, height: 50),
-      ],
-    );
+    return AppIcon(app: app);
   }
 
   @override
@@ -131,10 +88,10 @@ class _AppListState extends State<AppList> {
           filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             decoration: BoxDecoration(
-              color: holoSurface,
+              color: AppColors.holoSurface,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: holoCyan.withValues(alpha: 0.22),
+                color: AppColors.holoCyan.withValues(alpha: 0.22),
                 width: 1.0,
               ),
               boxShadow: [
@@ -160,7 +117,7 @@ class _AppListState extends State<AppList> {
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          holoCyan,
+                          AppColors.holoCyan,
                           Colors.transparent,
                         ],
                       ),
@@ -181,7 +138,7 @@ class _AppListState extends State<AppList> {
                       ),
                       onSubmitted: (value) {
                         if (qApps.isNotEmpty) {
-                          InstalledApps.startApp(qApps.first.packageName);
+                          AppService.launchApp(qApps.first.packageName);
                         }
                       },
                       textStyle: WidgetStateProperty.all(
@@ -193,7 +150,7 @@ class _AppListState extends State<AppList> {
                       ),
                       leading: const Icon(
                         Icons.search_rounded,
-                        color: holoCyan,
+                        color: AppColors.holoCyan,
                         size: 22,
                       ),
                       backgroundColor: WidgetStateProperty.all(
@@ -202,7 +159,7 @@ class _AppListState extends State<AppList> {
                       elevation: WidgetStateProperty.all(0),
                       side: WidgetStateProperty.all(
                         BorderSide(
-                          color: holoCyan.withValues(alpha: 0.25),
+                          color: AppColors.holoCyan.withValues(alpha: 0.25),
                           width: 1,
                         ),
                       ),
@@ -220,7 +177,7 @@ class _AppListState extends State<AppList> {
                       trailing: [
                         if (_searchQuery.isNotEmpty)
                           IconButton(
-                            icon: const Icon(Icons.close_rounded, color: holoCyan, size: 20),
+                            icon: const Icon(Icons.close_rounded, color: AppColors.holoCyan, size: 20),
                             onPressed: () {
                               _searchController.clear();
                               setState(() {
@@ -240,7 +197,7 @@ class _AppListState extends State<AppList> {
                       gradient: LinearGradient(
                         colors: [
                           Colors.transparent,
-                          holoCyan.withValues(alpha: 0.25),
+                          AppColors.holoCyan.withValues(alpha: 0.25),
                           Colors.transparent,
                         ],
                       ),
@@ -283,9 +240,9 @@ class _AppListState extends State<AppList> {
                         return GestureDetector(
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            InstalledApps.startApp(app.packageName);
+                            AppService.launchApp(app.packageName);
                           },
-                          onLongPress: () => showAppContextMenu(
+                          onLongPress: () => AppContextMenu.show(
                             context,
                             app: app,
                             isPinned: widget.pinnedApps.any(
@@ -333,10 +290,7 @@ class _AppListState extends State<AppList> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       onTap: () {
-                        final wikiUrl = Uri.parse(
-                          'https://en.wikipedia.org/wiki/${Uri.encodeComponent(def.title)}',
-                        );
-                        launchUrl(wikiUrl, mode: LaunchMode.externalApplication);
+                        UrlUtils.openWikipedia(def.title);
                       },
                     ),
                   if (_searchQuery.isNotEmpty)

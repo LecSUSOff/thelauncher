@@ -45,7 +45,7 @@ Future<WikiDefinition?> fetchDefinition(String query) async {
       );
     }
   } catch (e) {
-    print("Wiki Error: $e");
+    // Silent fail to maintain same behavior
     return null;
   }
   return null;

@@ -1,14 +1,14 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
-import 'package:installed_apps/installed_apps.dart';
-import 'package:palette_generator/palette_generator.dart';
 import 'package:device_wallpaper_flutter/device_wallpaper_flutter.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
 import 'applist.dart';
 import 'youhub.dart';
+import 'perch.dart';
+import 'core/services/app_service.dart';
+import 'core/constants.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +53,9 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   Uint8List? _wallpaperBytes;
   List<AppInfo> _pinnedApps = [];
   List<String> _userWidgets = [];
+  List<AppInfo> _allApps = [];
+  bool _isLoading = true;
+  
   final PageController _rootPageController = PageController(
     initialPage: 1,
   );
@@ -61,13 +64,14 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   void initState() {
     super.initState();
     _getCurrentWallpaper();
+    _initLauncher();
 
     homeChannel.setMethodCallHandler((call) async {
       if (call.method == 'onHomePressed') {
         if (_rootPageController.hasClients && _rootPageController.page != 1) {
           _rootPageController.animateToPage(
             1,
-            duration: const Duration(milliseconds: 400),
+            duration: AppDurations.medium,
             curve: Curves.easeOutCubic,
           );
         }
@@ -75,46 +79,50 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
     });
   }
 
-  Future<({List<AppInfo> allApps, List<AppInfo> pinnedApps, List<String> savedWidgets})> _loadLauncherData() async {
-    final allApps = await _getApps();
-    final prefs = await SharedPreferences.getInstance();
-    List<String>? savedPackages = prefs.getStringList('pinned_apps');
-    List<String>? savedWidgets = prefs.getStringList('saved_widgets');
-    savedPackages ??= await getDefaultPackageNames();
-    savedWidgets ??= [];
+  @override
+  void dispose() {
+    _rootPageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initLauncher() async {
+    final allApps = await AppService.getInstalledApps();
+    final savedPackages = await AppService.getPinnedPackages();
+    final savedWidgets = await AppService.getSavedWidgets();
+
+    List<String> packagesToUse = savedPackages;
+    if (packagesToUse.isEmpty) {
+      packagesToUse = await getDefaultPackageNames();
+    }
+
     final appMap = {for (final app in allApps) app.packageName: app};
-    final pinned = savedPackages
+    final pinned = packagesToUse
         .map((pkg) => appMap[pkg])
         .whereType<AppInfo>()
         .toList();
 
-    return (allApps: allApps, pinnedApps: pinned, savedWidgets: savedWidgets);
+    if (mounted) {
+      setState(() {
+        _allApps = allApps;
+        _pinnedApps = pinned;
+        _userWidgets = savedWidgets;
+        _isLoading = false;
+      });
+    }
   }
 
   void saveWidget(String widget) {
     setState(() {
       _userWidgets.add(widget);
     });
-
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setStringList(
-        'saved_widgets', 
-        _userWidgets,
-      );
-    });
+    AppService.saveWidgets(_userWidgets);
   }
 
   void removeWidget(String widget) {
     setState(() {
       _userWidgets.remove(widget);
     });
-
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setStringList(
-        'saved_widgets', 
-        _userWidgets,
-      );
-    });
+    AppService.saveWidgets(_userWidgets);
   }
 
   void togglePinApp(AppInfo app) {
@@ -125,32 +133,20 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
         if (_pinnedApps.length < 5) _pinnedApps.add(app);
       }
     });
-
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setStringList(
-        'pinned_apps', 
-        _pinnedApps.map((a) => a.packageName).toList(),
-      );
-    });
+    AppService.savePinnedPackages(_pinnedApps.map((a) => a.packageName).toList());
   }
 
   Future<void> _getCurrentWallpaper() async {
     try {
       Uint8List? bytes = await DeviceWallpaperFlutter.getWallpaper();
-      setState(() {
-        _wallpaperBytes = bytes;
-      });
+      if (mounted) {
+        setState(() {
+          _wallpaperBytes = bytes;
+        });
+      }
     } catch (e) {
-      print("Failed to get wallpaper: $e");
+      // Silent fail to maintain same behavior
     }
-  }
-
-  Future<List<AppInfo>> _getApps() async {
-    return await InstalledApps.getInstalledApps(
-      excludeSystemApps: false,
-      excludeNonLaunchableApps: true,
-      withIcon: true,
-    );
   }
 
   @override
@@ -159,75 +155,73 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
       body: OrientationBuilder(
         builder: (context, orientation) {
           if (orientation == Orientation.landscape) {
-            return const Center(); 
+            return const PerchScreen();
           }
-          return FutureBuilder(
-            future: _loadLauncherData(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final allApps = snapshot.data!.allApps;
-              final pinnedApps = snapshot.data!.pinnedApps;
-              final userWidgets = snapshot.data!.savedWidgets;
 
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: AnimatedBuilder(
-                      animation: _rootPageController,
-                      builder: (context, child) {
-                        final double page = _rootPageController.hasClients ? (_rootPageController.page ?? 1.0) : 1.0;
-                        final double offset = (1.0 - page) * 35.0;
+          if (_isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+          
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-                        return Transform.translate(
-                          offset: Offset(offset, 0),
-                          child: Transform.scale(
-                            scale: 1.15,
-                            child: Image.memory(
-                              _wallpaperBytes!,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 50, bottom: 45),
-                    child: GestureDetector(
-                      onVerticalDragUpdate: (details) {
-                        if (details.primaryDelta! > 2) {
-                          homeChannel.invokeMethod('openNotifications');
-                        }
-                      },
-                      child: PageView(
-                        controller: _rootPageController,
-                        physics: const BouncingScrollPhysics(),
-                        children: [
-                          YouHub(),
-                          HomePage(
-                            pinnedApps: pinnedApps,
-                            onTogglePin: togglePinApp,
-                            userWidgets: userWidgets,
-                            onAddWidget: saveWidget,
-                            onRemoveWidget: removeWidget,
-                          ),
-                          AppList(
-                            apps: allApps, 
-                            pinnedApps: _pinnedApps, 
-                            onTogglePin: togglePinApp,
-                          ),
-                        ],
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _rootPageController,
+                  builder: (context, child) {
+                    final double page = _rootPageController.hasClients
+                        ? (_rootPageController.page ?? 1.0)
+                        : 1.0;
+                    final double offset = (1.0 - page) * 35.0;
+
+                    return Transform.translate(
+                      offset: Offset(offset, 0),
+                      child: Transform.scale(
+                        scale: 1.15,
+                        child: _wallpaperBytes != null
+                            ? Image.memory(
+                                _wallpaperBytes!,
+                                fit: BoxFit.cover,
+                              )
+                            : const SizedBox.expand(),
                       ),
-                    ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 50, bottom: 45),
+                child: GestureDetector(
+                  onVerticalDragUpdate: (details) {
+                    if (details.primaryDelta! > 2) {
+                      homeChannel.invokeMethod('openNotifications');
+                    }
+                  },
+                  child: PageView(
+                    controller: _rootPageController,
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      const YouHub(),
+                      HomePage(
+                        pinnedApps: _pinnedApps,
+                        onTogglePin: togglePinApp,
+                        userWidgets: _userWidgets,
+                        onAddWidget: saveWidget,
+                        onRemoveWidget: removeWidget,
+                      ),
+                      AppList(
+                        apps: _allApps,
+                        pinnedApps: _pinnedApps,
+                        onTogglePin: togglePinApp,
+                      ),
+                    ],
                   ),
-                ],
-              );
-            },
+                ),
+              ),
+            ],
           );
         },
       ),

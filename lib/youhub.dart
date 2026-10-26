@@ -2,9 +2,13 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_calendar/device_calendar.dart';
 import 'package:intl/intl.dart';
+import 'core/constants.dart';
+import 'core/services/app_service.dart';
+import 'core/services/weather_service.dart';
+import 'core/services/calendar_service.dart';
+import 'core/utils/app_utils.dart';
 
 class YouHub extends StatefulWidget {
   const YouHub({super.key});
@@ -14,14 +18,12 @@ class YouHub extends StatefulWidget {
 }
 
 class _YouHubState extends State<YouHub> {
-  static const Color holoCyan = Color(0xFF33B5E5);
-  static const Color holoSurface = Color(0xCC181B20);
+  // Using AppColors constants
 
   final TextEditingController _notesController = TextEditingController();
-  final DeviceCalendarPlugin _deviceCalendarPlugin = DeviceCalendarPlugin();
 
   // Independent Futures for smart loading
-  Future<({double temp, int code, String city})?>? _weatherFuture;
+  Future<WeatherData?>? _weatherFuture;
   Future<List<Event>>? _eventsFuture;
   Future<String>? _factFuture;
 
@@ -48,92 +50,26 @@ class _YouHubState extends State<YouHub> {
   }
 
   Future<void> _loadSavedNotes() async {
-    final prefs = await SharedPreferences.getInstance();
+    final notes = await AppService.getNotes();
     if (mounted) {
       setState(() {
-        _notesController.text = prefs.getString('youhub_notes') ?? '';
+        _notesController.text = notes;
       });
     }
   }
 
   Future<void> _saveNotes(String text) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('youhub_notes', text);
+    await AppService.saveNotes(text);
   }
 
   // --- CALENDAR INTEGRATION ---
   Future<List<Event>> _fetchUpcomingEvents() async {
-    List<Event> upcomingEvents = [];
-    try {
-      var permissionsGranted = await _deviceCalendarPlugin.hasPermissions();
-      if (permissionsGranted.isSuccess && !(permissionsGranted.data ?? false)) {
-        permissionsGranted = await _deviceCalendarPlugin.requestPermissions();
-        if (!permissionsGranted.isSuccess || !(permissionsGranted.data ?? false)) {
-          return [];
-        }
-      }
-
-      final calendarsResult = await _deviceCalendarPlugin.retrieveCalendars();
-      if (calendarsResult.data != null) {
-        for (var calendar in calendarsResult.data!) {
-          final eventsResult = await _deviceCalendarPlugin.retrieveEvents(
-            calendar.id,
-            RetrieveEventsParams(
-              startDate: DateTime.now(),
-              endDate: DateTime.now().add(const Duration(days: 2)),
-            ),
-          );
-
-          if (eventsResult.data != null) {
-            upcomingEvents.addAll(eventsResult.data!);
-          }
-        }
-      }
-      upcomingEvents.sort((a, b) => (a.start as DateTime).compareTo(b.start as DateTime));
-      return upcomingEvents.take(3).toList(); // Show top 3 events
-    } catch (e) {
-      debugPrint("Calendar error: $e");
-      return [];
-    }
+    return CalendarService.fetchUpcomingEvents(daysAhead: 2, limit: 3);
   }
 
   // --- WEATHER INTEGRATION ---
-  Future<({double temp, int code, String city})?> fetchCurrentWeather() async {
-    double lat = 52.52;
-    double lon = 13.41;
-    String city = "Local";
-
-    try {
-      final locRes = await http.get(
-        Uri.parse('https://ipapi.co/json/'),
-        headers: {'User-Agent': 'CandyLauncher/1.0'},
-      ).timeout(const Duration(seconds: 7));
-
-      if (locRes.statusCode == 200) {
-        final locData = json.decode(locRes.body);
-        if (locData['latitude'] != null && locData['longitude'] != null) {
-          lat = (locData['latitude'] as num).toDouble();
-          lon = (locData['longitude'] as num).toDouble();
-          city = locData['city'] ?? "Local";
-        }
-      }
-    } catch (_) {}
-
-    try {
-      final weatherUrl = Uri.parse('https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code');
-      final weatherRes = await http.get(weatherUrl).timeout(const Duration(seconds: 7));
-
-      if (weatherRes.statusCode == 200) {
-        final current = json.decode(weatherRes.body)['current'];
-        return (
-          temp: (current['temperature_2m'] as num).toDouble(),
-          code: current['weather_code'] as int,
-          city: city,
-        );
-      }
-    } catch (_) {}
-
-    return null;
+  Future<WeatherData?> fetchCurrentWeather() async {
+    return WeatherService.fetchCurrentWeather(timeout: const Duration(seconds: 7));
   }
 
   // --- SMART FACT INTEGRATION ---
@@ -148,13 +84,7 @@ class _YouHubState extends State<YouHub> {
   }
 
   String _getWeatherCondition(int code) {
-    if (code == 0) return "Clear Sky";
-    if (code <= 3) return "Partly Cloudy";
-    if (code <= 48) return "Foggy";
-    if (code <= 67) return "Rainy";
-    if (code <= 77) return "Snowy";
-    if (code <= 82) return "Showers";
-    return "Thunderstorm";
+    return WeatherService.getWeatherCondition(code);
   }
  
   IconData _getWeatherIcon(int code) {
@@ -168,11 +98,7 @@ class _YouHubState extends State<YouHub> {
   }
 
   String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour >= 23 || hour < 4) return "Staying up late?";
-    if (hour < 12) return "Good Morning!";
-    if (hour < 17) return "Good Afternoon!";
-    return "Good Evening!";
+    return AppUtils.getGreeting();
   }
 
   @override
@@ -218,7 +144,7 @@ class _YouHubState extends State<YouHub> {
                             height: 2,
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Colors.transparent, holoCyan, Colors.transparent],
+                                colors: [Colors.transparent, AppColors.holoCyan, Colors.transparent],
                               ),
                             ),
                           ),
@@ -226,8 +152,8 @@ class _YouHubState extends State<YouHub> {
                           Expanded(
                             child: RefreshIndicator(
                               onRefresh: _refreshFeed,
-                              color: holoCyan,
-                              backgroundColor: holoSurface,
+                              color: AppColors.holoCyan,
+                              backgroundColor: AppColors.holoSurface,
                               child: ListView(
                                 padding: const EdgeInsets.all(20),
                                 physics: const AlwaysScrollableScrollPhysics(),
@@ -296,7 +222,7 @@ class _YouHubState extends State<YouHub> {
                                       future: _eventsFuture,
                                       builder: (context, snapshot) {
                                         if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return const Center(child: CircularProgressIndicator(color: holoCyan, strokeWidth: 2));
+                                          return const Center(child: CircularProgressIndicator(color: AppColors.holoCyan, strokeWidth: 2));
                                         }
                                         final events = snapshot.data ?? [];
                                         if (events.isEmpty) {
@@ -316,7 +242,7 @@ class _YouHubState extends State<YouHub> {
                                                     width: 3,
                                                     height: 38,
                                                     decoration: BoxDecoration(
-                                                      color: holoCyan,
+                                                      color: AppColors.holoCyan,
                                                       borderRadius: BorderRadius.circular(2),
                                                     ),
                                                   ),
@@ -381,7 +307,7 @@ class _YouHubState extends State<YouHub> {
                                       future: _factFuture,
                                       builder: (context, snapshot) {
                                         if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return const Center(child: CircularProgressIndicator(color: holoCyan, strokeWidth: 2));
+                                          return const Center(child: CircularProgressIndicator(color: AppColors.holoCyan, strokeWidth: 2));
                                         }
                                         return Text(
                                           snapshot.data ?? "",
@@ -430,7 +356,7 @@ class HoloSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: _YouHubState.holoCyan),
+            Icon(icon, size: 20, color: AppColors.holoCyan),
             const SizedBox(width: 8),
             Text(
               title,
