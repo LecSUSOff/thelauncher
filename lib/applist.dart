@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:flutter/services.dart';
-import 'helpers.dart';
 import 'smartSearch.dart';
 import 'dart:async';
 import 'core/constants.dart';
@@ -23,13 +22,17 @@ void searchTheWeb(String query) async {
 class AppList extends StatefulWidget {
   final List<AppInfo> apps;
   final List<AppInfo> pinnedApps;
+  final List<AppInfo> blockedApps;
   final ValueChanged<AppInfo> onTogglePin;
+  final ValueChanged<AppInfo> onToggleBlock;
 
   const AppList({
     super.key,
     required this.apps,
     required this.pinnedApps,
+    required this.blockedApps,
     required this.onTogglePin,
+    required this.onToggleBlock,
   });
 
   @override
@@ -101,7 +104,7 @@ class _AppListState extends State<AppList> {
                   offset: const Offset(0, 6),
                 ),
                 BoxShadow(
-                  color: holoCyan.withValues(alpha: 0.04),
+                  color: AppColors.holoCyan.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 0),
                 ),
@@ -138,7 +141,7 @@ class _AppListState extends State<AppList> {
                       ),
                       onSubmitted: (value) {
                         if (qApps.isNotEmpty) {
-                          AppService.launchApp(qApps.first.packageName);
+                          AppService.launchApp(context, qApps.first.packageName);
                         }
                       },
                       textStyle: WidgetStateProperty.all(
@@ -240,7 +243,7 @@ class _AppListState extends State<AppList> {
                         return GestureDetector(
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            AppService.launchApp(app.packageName);
+                            AppService.launchApp(context, app.packageName);
                           },
                           onLongPress: () => AppContextMenu.show(
                             context,
@@ -248,7 +251,11 @@ class _AppListState extends State<AppList> {
                             isPinned: widget.pinnedApps.any(
                               (a) => a.packageName == app.packageName,
                             ),
+                            isBlocked: widget.blockedApps.any(
+                              (a) => a.packageName == app.packageName,
+                            ),
                             onTogglePin: widget.onTogglePin,
+                            onToggleBlock: widget.onToggleBlock,
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,

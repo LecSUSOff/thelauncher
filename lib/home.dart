@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:animated_analog_clock/animated_analog_clock.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:flutter_media_controller/flutter_media_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:flutter_media_controller/flutter_media_controller.dart';
 import 'dart:async';
-import 'helpers.dart';
 import 'core/constants.dart';
 import 'core/services/app_service.dart';
 import 'core/services/media_service.dart';
@@ -18,7 +17,9 @@ import 'widgets/app_context_menu.dart';
 
 class HomePage extends StatefulWidget {
   final List<AppInfo> pinnedApps;
+  final List<AppInfo> blockedApps;
   final ValueChanged<AppInfo> onTogglePin;
+  final ValueChanged<AppInfo> onToggleBlock;
   final List<String> userWidgets;
   final ValueChanged<String> onAddWidget;
   final ValueChanged<String> onRemoveWidget;
@@ -26,7 +27,9 @@ class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
     required this.pinnedApps,
+    required this.blockedApps,
     required this.onTogglePin,
+    required this.onToggleBlock,
     required this.userWidgets,
     required this.onAddWidget,
     required this.onRemoveWidget,
@@ -251,19 +254,19 @@ class _HomePageState extends State<HomePage> {
                                         defaultTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w400),
                                         weekendTextStyle: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
                                         todayDecoration: BoxDecoration(
-                                          color: holoCyan.withValues(alpha: 0.2),
+                                          color: AppColors.holoCyan.withValues(alpha: 0.2),
                                           shape: BoxShape.rectangle,
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: holoCyan, width: 1.2),
+                                          border: Border.all(color: AppColors.holoCyan, width: 1.2),
                                         ),
                                         selectedDecoration: BoxDecoration(
-                                          color: holoCyan,
+                                          color: AppColors.holoCyan,
                                           shape: BoxShape.rectangle,
                                           borderRadius: BorderRadius.circular(6),
                                         ),
                                       ),
                                       headerStyle: const HeaderStyle(
-                                        titleTextStyle: TextStyle(color: holoCyan, fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 1.0),
+                                        titleTextStyle: TextStyle(color: AppColors.holoCyan, fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 1.0),
                                         formatButtonVisible: false,
                                         leftChevronIcon: Icon(Icons.chevron_left_rounded, color: Colors.white70),
                                         rightChevronIcon: Icon(Icons.chevron_right_rounded, color: Colors.white70),
@@ -490,7 +493,7 @@ class _HomePageState extends State<HomePage> {
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        AppService.launchApp(app.packageName);
+                        AppService.launchApp(context, app.packageName);
                       },
                       onLongPress: () {
                         HapticFeedback.mediumImpact();
@@ -498,7 +501,9 @@ class _HomePageState extends State<HomePage> {
                           context,
                           app: app,
                           isPinned: widget.pinnedApps.any((a) => a.packageName == app.packageName),
+                          isBlocked: widget.pinnedApps.any((a) => a.packageName == app.packageName),
                           onTogglePin: widget.onTogglePin,
+                          onToggleBlock: widget.onToggleBlock,
                         );
                       },
                       child: Padding(

@@ -116,10 +116,10 @@ class _PerchScreenState extends State<PerchScreen> {
                     filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: holoSurface,
+                        color: AppColors.holoSurface,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: holoCyan.withValues(alpha: 0.22),
+                          color: AppColors.holoCyan.withValues(alpha: 0.22),
                           width: 1.0,
                         ),
                       ),
@@ -185,10 +185,10 @@ class _PerchScreenState extends State<PerchScreen> {
                     filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: holoSurface,
+                        color: AppColors.holoSurface,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: holoCyan.withValues(alpha: 0.15),
+                          color: AppColors.holoCyan.withValues(alpha: 0.15),
                           width: 1.0,
                         ),
                       ),
@@ -198,7 +198,7 @@ class _PerchScreenState extends State<PerchScreen> {
                             height: 2,
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Colors.transparent, holoCyan, Colors.transparent],
+                                colors: [Colors.transparent, AppColors.holoCyan, Colors.transparent],
                               ),
                             ),
                           ),
@@ -313,10 +313,10 @@ class _PerchScreenState extends State<PerchScreen> {
               const SizedBox(width: 8),
               Container(
                 decoration: BoxDecoration(
-                  color: holoCyan,
+                  color: AppColors.holoCyan,
                   shape: BoxShape.circle,
                   boxShadow: [
-                    BoxShadow(color: holoCyan.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1),
+                    BoxShadow(color: AppColors.holoCyan.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1),
                   ],
                 ),
                 child: IconButton(

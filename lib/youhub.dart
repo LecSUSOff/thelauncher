@@ -131,10 +131,10 @@ class _YouHubState extends State<YouHub> {
                     filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: holoSurface,
+                        color: AppColors.holoSurface,
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
-                          color: holoCyan.withValues(alpha: 0.22),
+                          color: AppColors.holoCyan.withValues(alpha: 0.22),
                           width: 1.0,
                         ),
                       ),
@@ -168,7 +168,7 @@ class _YouHubState extends State<YouHub> {
                                       future: _weatherFuture,
                                       builder: (context, snapshot) {
                                         if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return const Center(child: CircularProgressIndicator(color: holoCyan));
+                                          return const Center(child: CircularProgressIndicator(color: AppColors.holoCyan));
                                         }
                                         final data = snapshot.data;
                                         if (data == null) {
@@ -182,7 +182,7 @@ class _YouHubState extends State<YouHub> {
                                               children: [
                                                 Row(
                                                   children: [
-                                                    const Icon(Icons.location_on_rounded, size: 16, color: holoCyan),
+                                                    const Icon(Icons.location_on_rounded, size: 16, color: AppColors.holoCyan),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       data.city,
@@ -192,17 +192,17 @@ class _YouHubState extends State<YouHub> {
                                                 ),
                                                 const SizedBox(height: 4),
                                                 Text(
-                                                  _getWeatherCondition(data.code),
+                                                  _getWeatherCondition(data.weatherCode),
                                                   style: const TextStyle(fontSize: 14, color: Colors.white70),
                                                 ),
                                               ],
                                             ),
                                             Row(
                                               children: [
-                                                Icon(_getWeatherIcon(data.code), color: holoCyan, size: 36),
+                                                Icon(_getWeatherIcon(data.weatherCode), color: AppColors.holoCyan, size: 36),
                                                 const SizedBox(width: 12),
                                                 Text(
-                                                  "${data.temp.round()}°",
+                                                  "${data.temperature.round()}°",
                                                   style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white),
                                                 ),
                                               ],
@@ -381,7 +381,7 @@ class HoloSection extends StatelessWidget {
               gradient: LinearGradient(
                 colors: [
                   Colors.transparent,
-                  _YouHubState.holoCyan.withValues(alpha: 0.3),
+                  AppColors.holoCyan.withValues(alpha: 0.3),
                   Colors.transparent,
                 ],
               ),

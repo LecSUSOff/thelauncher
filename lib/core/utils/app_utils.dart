@@ -5,9 +5,10 @@ class AppUtils {
     if (!input.contains(RegExp(r'[\+\-\*\/\^]'))) return null;
 
     try {
-      Parser p = Parser();
-      Expression exp = p.parse(input);
-      double result = exp.evaluate(EvaluationType.REAL, ContextModel());
+      final p = GrammarParser();
+      final exp = p.parse(input);
+      final evaluator = RealEvaluator();
+      final result = evaluator.evaluate(exp);
 
       return result % 1 == 0
           ? result.toInt().toString()

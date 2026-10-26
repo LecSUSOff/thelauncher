@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:device_wallpaper_flutter/device_wallpaper_flutter.dart';
 import 'package:flutter/services.dart';
+import 'package:thelauncher/helpers.dart';
 import 'home.dart';
 import 'applist.dart';
 import 'youhub.dart';
@@ -52,6 +53,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   static const homeChannel = MethodChannel('launcher/home_intent');
   Uint8List? _wallpaperBytes;
   List<AppInfo> _pinnedApps = [];
+  List<AppInfo> _blockedApps = [];
   List<String> _userWidgets = [];
   List<AppInfo> _allApps = [];
   bool _isLoading = true;
@@ -88,7 +90,11 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   Future<void> _initLauncher() async {
     final allApps = await AppService.getInstalledApps();
     final savedPackages = await AppService.getPinnedPackages();
+    final blockedPackages = await AppService.getBlocokedPackages();
     final savedWidgets = await AppService.getSavedWidgets();
+
+    // Await the future returned by getAppsInfoFromPackageNames
+    final blockedApps = await getAppsInfoFromPackageNames(blockedPackages);
 
     List<String> packagesToUse = savedPackages;
     if (packagesToUse.isEmpty) {
@@ -105,6 +111,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
       setState(() {
         _allApps = allApps;
         _pinnedApps = pinned;
+        _blockedApps = blockedApps;
         _userWidgets = savedWidgets;
         _isLoading = false;
       });
@@ -136,6 +143,17 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
     AppService.savePinnedPackages(_pinnedApps.map((a) => a.packageName).toList());
   }
 
+  void toggleBlockApp(AppInfo app) {
+    setState(() {
+      if (_blockedApps.any((a) => a.packageName == app.packageName)) {
+        _blockedApps.removeWhere((a) => a.packageName == app.packageName);
+      } else {
+        _blockedApps.add(app);
+      }
+    });
+    AppService.saveBlockedPackages(_blockedApps.map((a) => a.packageName).toList());
+  }
+
   Future<void> _getCurrentWallpaper() async {
     try {
       Uint8List? bytes = await DeviceWallpaperFlutter.getWallpaper();
@@ -164,7 +182,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
             );
           }
           
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
           return Stack(
             children: [
@@ -207,7 +225,9 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
                       const YouHub(),
                       HomePage(
                         pinnedApps: _pinnedApps,
+                        blockedApps: _blockedApps,
                         onTogglePin: togglePinApp,
+                        onToggleBlock: toggleBlockApp,
                         userWidgets: _userWidgets,
                         onAddWidget: saveWidget,
                         onRemoveWidget: removeWidget,
@@ -215,7 +235,9 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
                       AppList(
                         apps: _allApps,
                         pinnedApps: _pinnedApps,
+                        blockedApps: _blockedApps,
                         onTogglePin: togglePinApp,
+                        onToggleBlock: toggleBlockApp,
                       ),
                     ],
                   ),
