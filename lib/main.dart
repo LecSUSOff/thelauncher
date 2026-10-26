@@ -54,8 +54,8 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   List<AppInfo> _pinnedApps = [];
   List<String> _userWidgets = [];
   final PageController _rootPageController = PageController(
-      initialPage: 1,
-    );
+    initialPage: 1,
+  );
 
   @override
   void initState() {
@@ -156,71 +156,78 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder(
-        future: _loadLauncherData(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          if (orientation == Orientation.landscape) {
+            return const Center(); 
           }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final allApps = snapshot.data!.allApps;
-          final pinnedApps = snapshot.data!.pinnedApps;
-          final userWidgets = snapshot.data!.savedWidgets;
+          return FutureBuilder(
+            future: _loadLauncherData(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final allApps = snapshot.data!.allApps;
+              final pinnedApps = snapshot.data!.pinnedApps;
+              final userWidgets = snapshot.data!.savedWidgets;
 
-          return Stack(
-            children: [
-              Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _rootPageController,
-                    builder: (context, child) {
-                      final double page = _rootPageController.hasClients ? (_rootPageController.page ?? 1.0) : 1.0;
-                      final double offset = (1.0 - page) * 35.0;
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: _rootPageController,
+                      builder: (context, child) {
+                        final double page = _rootPageController.hasClients ? (_rootPageController.page ?? 1.0) : 1.0;
+                        final double offset = (1.0 - page) * 35.0;
 
-                      return Transform.translate(
-                        offset: Offset(offset, 0),
-                        child: Transform.scale(
-                          scale: 1.15,
-                          child: Image.memory(
-                            _wallpaperBytes!,
-                            fit: BoxFit.cover,
+                        return Transform.translate(
+                          offset: Offset(offset, 0),
+                          child: Transform.scale(
+                            scale: 1.15,
+                            child: Image.memory(
+                              _wallpaperBytes!,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
-                              Padding(
-                padding: const EdgeInsets.only(top: 50, bottom: 45),
-                child: GestureDetector(
-                  onVerticalDragUpdate: (details) {
-                    if (details.primaryDelta! > 2) {
-                      homeChannel.invokeMethod('openNotifications');
-                    }
-                  },
-                  child: PageView(
-                    controller: _rootPageController,
-                    physics: const BouncingScrollPhysics(),
-                    children: [
-                      YouHub(),
-                      HomePage(
-                        pinnedApps: pinnedApps,
-                        onTogglePin: togglePinApp,
-                        userWidgets: userWidgets,
-                        onAddWidget: saveWidget,
-                        onRemoveWidget: removeWidget,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 50, bottom: 45),
+                    child: GestureDetector(
+                      onVerticalDragUpdate: (details) {
+                        if (details.primaryDelta! > 2) {
+                          homeChannel.invokeMethod('openNotifications');
+                        }
+                      },
+                      child: PageView(
+                        controller: _rootPageController,
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          YouHub(),
+                          HomePage(
+                            pinnedApps: pinnedApps,
+                            onTogglePin: togglePinApp,
+                            userWidgets: userWidgets,
+                            onAddWidget: saveWidget,
+                            onRemoveWidget: removeWidget,
+                          ),
+                          AppList(
+                            apps: allApps, 
+                            pinnedApps: _pinnedApps, 
+                            onTogglePin: togglePinApp,
+                          ),
+                        ],
                       ),
-                      AppList(
-                        apps: allApps, 
-                        pinnedApps: _pinnedApps, 
-                        onTogglePin: togglePinApp,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           );
         },
       ),
