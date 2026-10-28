@@ -50,7 +50,7 @@ class AppContextMenu {
                   isBlocked ? Icons.lock_open_outlined : Icons.lock_outlined,
                 ),
                 title: Text(
-                  "${isBlocked ? 'Unblock' : 'Block'} ${app.name}",
+                  "${isBlocked ? 'Remove' : 'Add'} intent pause for ${app.name}",
                   style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {

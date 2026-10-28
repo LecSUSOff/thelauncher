@@ -211,7 +211,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(top: 50, bottom: 45),
+                padding: const EdgeInsets.only(top: 30, bottom: 65),
                 child: GestureDetector(
                   onVerticalDragUpdate: (details) {
                     if (details.primaryDelta! > 2) {

@@ -198,7 +198,7 @@ class _YouHubState extends State<YouHub> {
                                         }
                                         final data = snapshot.data;
                                         if (data == null) {
-                                          return const Text("Weather unavailable, either something happerned to our API provider (pray it's not that) or you have no Interanet (in that case, check out fun fact)", style: TextStyle(color: Colors.white70));
+                                          return const Text("Weather offline. Look out the window /:", style: TextStyle(color: Colors.white70));
                                         }
                                         return Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
