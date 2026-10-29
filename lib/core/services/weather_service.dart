@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class WeatherData {
@@ -23,11 +24,13 @@ class WeatherService {
 
     // Try to get location from IP
     try {
-      final locRes = await http.get(
-        Uri.parse('https://ipapi.co/json/'),
-        headers: {'User-Agent': 'CandyLauncher/1.0'},
-      ).timeout(timeout);
-      
+      final locRes = await http
+          .get(
+            Uri.parse('https://ipapi.co/json/'),
+            headers: {'User-Agent': 'CandyLauncher/1.0'},
+          )
+          .timeout(timeout);
+
       if (locRes.statusCode == 200) {
         final locData = json.decode(locRes.body);
         if (locData['latitude'] != null && locData['longitude'] != null) {
@@ -66,5 +69,15 @@ class WeatherService {
     if (code <= 77) return "Snowy";
     if (code <= 82) return "Showers";
     return "Thunderstorm";
+  }
+
+  static IconData getWeatherIcon(int code) {
+    if (code == 0) return Icons.wb_sunny_rounded;
+    if (code <= 3) return Icons.wb_cloudy_rounded;
+    if (code <= 48) return Icons.cloud_queue_rounded;
+    if (code <= 67) return Icons.water_drop_rounded;
+    if (code <= 77) return Icons.ac_unit_rounded;
+    if (code <= 82) return Icons.grain_rounded;
+    return Icons.flash_on_rounded;
   }
 }

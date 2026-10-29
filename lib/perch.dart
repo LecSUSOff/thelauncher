@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animated_analog_clock/animated_analog_clock.dart';
@@ -10,6 +9,7 @@ import 'core/constants.dart';
 import 'core/services/weather_service.dart';
 import 'core/services/calendar_service.dart';
 import 'core/services/media_service.dart';
+import 'widgets/common/holo_container.dart';
 import 'widgets/digital_clock.dart';
 
 class PerchScreen extends StatefulWidget {
@@ -76,7 +76,9 @@ class _PerchScreenState extends State<PerchScreen> {
   // --- WEATHER & CALENDAR (from YouHub) ---
 
   Future<WeatherData?> fetchCurrentWeather() async {
-    return WeatherService.fetchCurrentWeather(timeout: const Duration(seconds: 5));
+    return WeatherService.fetchCurrentWeather(
+      timeout: const Duration(seconds: 5),
+    );
   }
 
   Future<List<Event>> _fetchUpcomingEvents() async {
@@ -85,16 +87,6 @@ class _PerchScreenState extends State<PerchScreen> {
 
   String _getWeatherCondition(int code) {
     return WeatherService.getWeatherCondition(code);
-  }
-
-  IconData _getWeatherIcon(int code) {
-    if (code == 0) return Icons.wb_sunny_rounded;
-    if (code <= 3) return Icons.wb_cloudy_rounded;
-    if (code <= 48) return Icons.cloud_queue_rounded;
-    if (code <= 67) return Icons.water_drop_rounded;
-    if (code <= 77) return Icons.ac_unit_rounded;
-    if (code <= 82) return Icons.grain_rounded;
-    return Icons.flash_on_rounded;
   }
 
   @override
@@ -110,66 +102,54 @@ class _PerchScreenState extends State<PerchScreen> {
               // ==================== LEFT PANE: CLOCK (60%) ====================
               Expanded(
                 flex: 6,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.holoSurface,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: AppColors.holoCyan.withValues(alpha: 0.22),
-                          width: 1.0,
+                child: HoloContainer(
+                  borderRadius: 24,
+                  child: Column(
+                    children: [
+                      // Holo shelf glow line
+                      const HoloTopGlow(),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => digitalClock = !digitalClock);
+                            HapticFeedback.selectionClick();
+                          },
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Spacer(),
+                                AnimatedCrossFade(
+                                  firstChild: const Center(
+                                    child: DigitalClock(),
+                                  ),
+                                  secondChild: const Center(
+                                    child: AnimatedAnalogClock(),
+                                  ),
+                                  crossFadeState: digitalClock
+                                      ? CrossFadeState.showFirst
+                                      : CrossFadeState.showSecond,
+                                  duration: AppDurations.fast,
+                                ),
+                                const Spacer(),
+                                Text(
+                                  DateFormat(
+                                    'EEEE, MMMM d',
+                                  ).format(DateTime.now()).toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 16,
+                                    letterSpacing: 2.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          // Holo shelf glow line
-                          Container(
-                            height: 2,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.transparent, AppColors.holoCyan, Colors.transparent],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() => digitalClock = !digitalClock);
-                                HapticFeedback.selectionClick();
-                              },
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Spacer(),
-                                    AnimatedCrossFade(
-                                      firstChild: const Center(child: DigitalClock()),
-                                      secondChild: const Center(child: AnimatedAnalogClock()),
-                                      crossFadeState: digitalClock ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                                      duration: AppDurations.fast,
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      DateFormat('EEEE, MMMM d').format(DateTime.now()).toUpperCase(),
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.6),
-                                        fontSize: 16,
-                                        letterSpacing: 2.0,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -179,45 +159,26 @@ class _PerchScreenState extends State<PerchScreen> {
               // ==================== RIGHT PANE: CONTEXT (40%) ====================
               Expanded(
                 flex: 4,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.holoSurface,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: AppColors.holoCyan.withValues(alpha: 0.15),
-                          width: 1.0,
+                child: HoloContainer(
+                  borderRadius: 24,
+                  borderColor: AppColors.holoCyan.withValues(alpha: 0.15),
+                  child: Column(
+                    children: [
+                      const HoloTopGlow(),
+                      Expanded(
+                        child: PageView(
+                          controller: _contextPageController,
+                          physics: const BouncingScrollPhysics(),
+                          children: [
+                            // 1. MEDIA CONTROLLER PANE
+                            _buildMediaPane(),
+
+                            // 2. AMBIENT WEATHER & CALENDAR PANE
+                            _buildAmbientPane(),
+                          ],
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          Container(
-                            height: 2,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.transparent, AppColors.holoCyan, Colors.transparent],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: PageView(
-                              controller: _contextPageController,
-                              physics: const BouncingScrollPhysics(),
-                              children: [
-                                // 1. MEDIA CONTROLLER PANE
-                                _buildMediaPane(),
-
-                                // 2. AMBIENT WEATHER & CALENDAR PANE
-                                _buildAmbientPane(),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -251,7 +212,10 @@ class _PerchScreenState extends State<PerchScreen> {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.holoCyan.withValues(alpha: 0.3), width: 1),
+              border: Border.all(
+                color: AppColors.holoCyan.withValues(alpha: 0.3),
+                width: 1,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.6),
@@ -262,24 +226,32 @@ class _PerchScreenState extends State<PerchScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(11),
-              child: mediaInfo!.thumbnailUrl != null && mediaInfo!.thumbnailUrl!.isNotEmpty
+              child: mediaInfo!.thumbnailUrl.isNotEmpty
                   ? Image.network(
-                      mediaInfo!.thumbnailUrl!,
+                      mediaInfo!.thumbnailUrl,
                       width: 72,
                       height: 72,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         width: 72,
                         height: 72,
                         color: Colors.white.withValues(alpha: 0.05),
-                        child: const Icon(Icons.music_note_rounded, size: 36, color: AppColors.holoCyan),
+                        child: const Icon(
+                          Icons.music_note_rounded,
+                          size: 36,
+                          color: AppColors.holoCyan,
+                        ),
                       ),
                     )
                   : Container(
                       width: 72,
                       height: 72,
                       color: Colors.white.withValues(alpha: 0.05),
-                      child: const Icon(Icons.music_note_rounded, size: 36, color: AppColors.holoCyan),
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        size: 36,
+                        color: AppColors.holoCyan,
+                      ),
                     ),
             ),
           ),
@@ -288,14 +260,23 @@ class _PerchScreenState extends State<PerchScreen> {
             mediaInfo!.track,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.white),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             mediaInfo!.artist.toUpperCase(),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0, color: AppColors.holoCyan),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.0,
+              color: AppColors.holoCyan,
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -303,7 +284,11 @@ class _PerchScreenState extends State<PerchScreen> {
             children: [
               IconButton(
                 splashRadius: 20,
-                icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 26),
+                icon: const Icon(
+                  Icons.skip_previous_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
                 onPressed: () async {
                   HapticFeedback.lightImpact();
                   await MediaService.previousTrack();
@@ -316,13 +301,19 @@ class _PerchScreenState extends State<PerchScreen> {
                   color: AppColors.holoCyan,
                   shape: BoxShape.circle,
                   boxShadow: [
-                    BoxShadow(color: AppColors.holoCyan.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1),
+                    BoxShadow(
+                      color: AppColors.holoCyan.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
                   ],
                 ),
                 child: IconButton(
                   splashRadius: 24,
                   icon: Icon(
-                    mediaInfo!.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    mediaInfo!.isPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
                     color: const Color(0xFF121417),
                     size: 28,
                   ),
@@ -336,7 +327,11 @@ class _PerchScreenState extends State<PerchScreen> {
               const SizedBox(width: 8),
               IconButton(
                 splashRadius: 20,
-                icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 26),
+                icon: const Icon(
+                  Icons.skip_next_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
                 onPressed: () async {
                   HapticFeedback.lightImpact();
                   await MediaService.nextTrack();
@@ -371,17 +366,41 @@ class _PerchScreenState extends State<PerchScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(data.city, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                      Text(_getWeatherCondition(data.weatherCode), style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                      Text(
+                        data.city,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        _getWeatherCondition(data.weatherCode),
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                   Row(
                     children: [
-                      Icon(_getWeatherIcon(data.weatherCode), color: AppColors.holoCyan, size: 26),
+                      Icon(
+                        WeatherService.getWeatherIcon(data.weatherCode),
+                        color: AppColors.holoCyan,
+                        size: 26,
+                      ),
                       const SizedBox(width: 6),
-                      Text("${data.temperature.round()}°", style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text(
+                        "${data.temperature.round()}°",
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
-                  )
+                  ),
                 ],
               );
             },
@@ -399,7 +418,13 @@ class _PerchScreenState extends State<PerchScreen> {
                 final events = snapshot.data ?? [];
                 if (events.isEmpty) {
                   return Center(
-                    child: Text("No upcoming events", style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12)),
+                    child: Text(
+                      "No upcoming events",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 12,
+                      ),
+                    ),
                   );
                 }
                 return ListView.builder(
@@ -412,14 +437,35 @@ class _PerchScreenState extends State<PerchScreen> {
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Row(
                         children: [
-                          Container(width: 2.5, height: 26, decoration: BoxDecoration(color: AppColors.holoCyan, borderRadius: BorderRadius.circular(2))),
+                          Container(
+                            width: 2.5,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: AppColors.holoCyan,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(event.title ?? "Busy", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                                Text(DateFormat('h:mm a').format(startTime), style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                                Text(
+                                  event.title ?? "Busy",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  DateFormat('h:mm a').format(startTime),
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ],
                             ),
                           ),

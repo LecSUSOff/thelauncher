@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:device_calendar/device_calendar.dart';
@@ -10,6 +9,8 @@ import 'core/services/app_service.dart';
 import 'core/services/weather_service.dart';
 import 'core/services/calendar_service.dart';
 import 'core/utils/app_utils.dart';
+import 'widgets/common/glow_divider.dart';
+import 'widgets/common/holo_container.dart';
 
 class YouHub extends StatefulWidget {
   const YouHub({super.key});
@@ -70,13 +71,17 @@ class _YouHubState extends State<YouHub> {
 
   // --- WEATHER INTEGRATION ---
   Future<WeatherData?> fetchCurrentWeather() async {
-    return WeatherService.fetchCurrentWeather(timeout: const Duration(seconds: 7));
+    return WeatherService.fetchCurrentWeather(
+      timeout: const Duration(seconds: 7),
+    );
   }
 
   // --- SMART FACT INTEGRATION ---
   Future<String> _fetchDailyFact() async {
     try {
-      final res = await http.get(Uri.parse('https://uselessfacts.jsph.pl/api/v2/facts/random')).timeout(const Duration(seconds: 2));
+      final res = await http
+          .get(Uri.parse('https://uselessfacts.jsph.pl/api/v2/facts/random'))
+          .timeout(const Duration(seconds: 2));
       if (res.statusCode == 200) {
         return json.decode(res.body)['text'];
       }
@@ -98,9 +103,8 @@ class _YouHubState extends State<YouHub> {
       "Pulling down to refresh again isn't going to fix your router. Go unplug it and plug it back in like a civilized person.",
       "Swiping down harder won't create 5G out of thin air. You've pulled this feed at least three times already. I can see you.\n\nP.S. Okay, maybe not \"See you\", we are not Google after all\n\nP.P.S. Don't sue us",
       "You turned on Airplane Mode on purpose just to see what would happen here, didn't you?",
-      "We wanted to build an AI to write these facts, but apparently it's not cool anymore\n\nI'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy"
+      "We wanted to build an AI to write these facts, but apparently it's not cool anymore\n\nI'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy, I'm not lazy",
     ];
-
 
     final random = Random();
 
@@ -111,16 +115,6 @@ class _YouHubState extends State<YouHub> {
 
   String _getWeatherCondition(int code) {
     return WeatherService.getWeatherCondition(code);
-  }
- 
-  IconData _getWeatherIcon(int code) {
-    if (code == 0) return Icons.wb_sunny_rounded;
-    if (code <= 3) return Icons.wb_cloudy_rounded;
-    if (code <= 48) return Icons.cloud_queue_rounded;
-    if (code <= 67) return Icons.water_drop_rounded;
-    if (code <= 77) return Icons.ac_unit_rounded;
-    if (code <= 82) return Icons.grain_rounded;
-    return Icons.flash_on_rounded;
   }
 
   String _getGreeting() {
@@ -151,205 +145,267 @@ class _YouHubState extends State<YouHub> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.holoSurface,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: AppColors.holoCyan.withValues(alpha: 0.22),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            height: 2,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Colors.transparent, AppColors.holoCyan, Colors.transparent],
-                              ),
-                            ),
-                          ),
+                child: HoloContainer(
+                  borderRadius: AppDimensions.borderRadiusLarge,
+                  child: Column(
+                    children: [
+                      const HoloTopGlow(),
 
-                          Expanded(
-                            child: RefreshIndicator(
-                              onRefresh: _refreshFeed,
-                              color: AppColors.holoCyan,
-                              backgroundColor: AppColors.holoSurface,
-                              child: ListView(
-                                padding: const EdgeInsets.all(20),
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: [
-                                  
-                                  // 1. LIVE WEATHER
-                                  HoloSection(
-                                    title: "Weather",
-                                    icon: Icons.cloud_outlined,
-                                    showDivider: true,
-                                    child: FutureBuilder(
-                                      future: _weatherFuture,
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return const Center(child: CircularProgressIndicator(color: AppColors.holoCyan));
-                                        }
-                                        final data = snapshot.data;
-                                        if (data == null) {
-                                          return const Text("Weather offline. Look out the window /:", style: TextStyle(color: Colors.white70));
-                                        }
-                                        return Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: _refreshFeed,
+                          color: AppColors.holoCyan,
+                          backgroundColor: AppColors.holoSurface,
+                          child: ListView(
+                            padding: const EdgeInsets.all(20),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              // 1. LIVE WEATHER
+                              HoloSection(
+                                title: "Weather",
+                                icon: Icons.cloud_outlined,
+                                showDivider: true,
+                                child: FutureBuilder(
+                                  future: _weatherFuture,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.holoCyan,
+                                        ),
+                                      );
+                                    }
+                                    final data = snapshot.data;
+                                    if (data == null) {
+                                      return const Text(
+                                        "Weather offline. Look out the window /:",
+                                        style: TextStyle(color: Colors.white70),
+                                      );
+                                    }
+                                    return Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                            Row(
                                               children: [
-                                                Row(
+                                                const Icon(
+                                                  Icons.location_on_rounded,
+                                                  size: 16,
+                                                  color: AppColors.holoCyan,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  data.city,
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _getWeatherCondition(
+                                                data.weatherCode,
+                                              ),
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white70,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              WeatherService.getWeatherIcon(
+                                                data.weatherCode,
+                                              ),
+                                              color: AppColors.holoCyan,
+                                              size: 36,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              "${data.temperature.round()}°",
+                                              style: const TextStyle(
+                                                fontSize: 40,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+
+                              // 2. UPCOMING CALENDAR
+                              HoloSection(
+                                title: "Get ready for",
+                                icon: Icons.event_note_rounded,
+                                showDivider: true,
+                                child: FutureBuilder<List<Event>>(
+                                  future: _eventsFuture,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.holoCyan,
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    }
+                                    final events = snapshot.data ?? [];
+                                    if (events.isEmpty) {
+                                      return const Text(
+                                        "No events scheduled.",
+                                        style: TextStyle(color: Colors.white70),
+                                      );
+                                    }
+                                    return Column(
+                                      children: events.map((event) {
+                                        final startTime =
+                                            event.start as DateTime;
+                                        final timeString = DateFormat(
+                                          'h:mm a',
+                                        ).format(startTime);
+                                        final dayString =
+                                            startTime.day == DateTime.now().day
+                                            ? "Today"
+                                            : "Tomorrow";
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12.0,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                width: 3,
+                                                height: 38,
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.holoCyan,
+                                                  borderRadius:
+                                                      BorderRadius.circular(2),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    const Icon(Icons.location_on_rounded, size: 16, color: AppColors.holoCyan),
-                                                    const SizedBox(width: 4),
                                                     Text(
-                                                      data.city,
-                                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                                                      event.title ?? "Busy",
+                                                      style: const TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: Colors.white,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      "$dayString, $timeString",
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors.white70,
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  _getWeatherCondition(data.weatherCode),
-                                                  style: const TextStyle(fontSize: 14, color: Colors.white70),
-                                                ),
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                Icon(_getWeatherIcon(data.weatherCode), color: AppColors.holoCyan, size: 36),
-                                                const SizedBox(width: 12),
-                                                Text(
-                                                  "${data.temperature.round()}°",
-                                                  style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  ),
-
-                                  // 2. UPCOMING CALENDAR
-                                  HoloSection(
-                                    title: "Get ready for",
-                                    icon: Icons.event_note_rounded,
-                                    showDivider: true,
-                                    child: FutureBuilder<List<Event>>(
-                                      future: _eventsFuture,
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return const Center(child: CircularProgressIndicator(color: AppColors.holoCyan, strokeWidth: 2));
-                                        }
-                                        final events = snapshot.data ?? [];
-                                        if (events.isEmpty) {
-                                          return const Text("No events scheduled.", style: TextStyle(color: Colors.white70));
-                                        }
-                                        return Column(
-                                          children: events.map((event) {
-                                            final startTime = event.start as DateTime;
-                                            final timeString = DateFormat('h:mm a').format(startTime);
-                                            final dayString = startTime.day == DateTime.now().day ? "Today" : "Tomorrow";
-                                            return Padding(
-                                              padding: const EdgeInsets.only(bottom: 12.0),
-                                              child: Row(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Container(
-                                                    width: 3,
-                                                    height: 38,
-                                                    decoration: BoxDecoration(
-                                                      color: AppColors.holoCyan,
-                                                      borderRadius: BorderRadius.circular(2),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 12),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          event.title ?? "Busy",
-                                                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow.ellipsis,
-                                                        ),
-                                                        const SizedBox(height: 2),
-                                                        Text(
-                                                          "$dayString, $timeString",
-                                                          style: const TextStyle(fontSize: 13, color: Colors.white70),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
                                               ),
-                                            );
-                                          }).toList(),
+                                            ],
+                                          ),
                                         );
-                                      },
-                                    ),
-                                  ),
-
-                                  // 3. QUICK NOTE
-                                  HoloSection(
-                                    title: "Quick Note",
-                                    icon: Icons.edit_note_rounded,
-                                    showDivider: true,
-                                    child: TextField(
-                                      controller: _notesController,
-                                      maxLines: 5,
-                                      minLines: 2,
-                                      onChanged: _saveNotes,
-                                      style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4),
-                                      decoration: InputDecoration(
-                                        hintText: "Write a quick thought or a reminder...",
-                                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
-                                        filled: true,
-                                        fillColor: Colors.black.withValues(alpha: 0.25),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  // 4. DAILY FACT
-                                  HoloSection(
-                                    title: "Did you know?",
-                                    icon: Icons.lightbulb_outline_rounded,
-                                    showDivider: false,
-                                    child: FutureBuilder<String>(
-                                      future: _factFuture,
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return const Center(child: CircularProgressIndicator(color: AppColors.holoCyan, strokeWidth: 2));
-                                        }
-                                        return Text(
-                                          snapshot.data ?? "",
-                                          style: const TextStyle(fontSize: 15, height: 1.4, color: Colors.white70),
-                                        );
-                                      },
-                                    ),
-                                  ),
-
-                                ],
+                                      }).toList(),
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
+
+                              // 3. QUICK NOTE
+                              HoloSection(
+                                title: "Quick Note",
+                                icon: Icons.edit_note_rounded,
+                                showDivider: true,
+                                child: TextField(
+                                  controller: _notesController,
+                                  maxLines: 5,
+                                  minLines: 2,
+                                  onChanged: _saveNotes,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    height: 1.4,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        "Write a quick thought or a reminder...",
+                                    hintStyle: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      fontSize: 14,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.black.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // 4. DAILY FACT
+                              HoloSection(
+                                title: "Did you know?",
+                                icon: Icons.lightbulb_outline_rounded,
+                                showDivider: false,
+                                child: FutureBuilder<String>(
+                                  future: _factFuture,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.holoCyan,
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    }
+                                    return Text(
+                                      snapshot.data ?? "",
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        height: 1.4,
+                                        color: Colors.white70,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -396,25 +452,14 @@ class HoloSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        
+
         child,
 
         if (showDivider) ...[
           const SizedBox(height: 24),
-          Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  AppColors.holoCyan.withValues(alpha: 0.3),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
+          const GlowDivider(opacity: 0.3),
           const SizedBox(height: 24),
-        ]
+        ],
       ],
     );
   }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const Color holoCyan = Color(0xFF33B5E5);
   static const Color holoSurface = Color(0xCC181B20);
-  static const Color holoSurfaceLight = Color(0xCC121417);
 }
 
 /// Common UI constants

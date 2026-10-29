@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animated_analog_clock/animated_analog_clock.dart';
@@ -14,6 +12,8 @@ import 'core/constants.dart';
 import 'core/services/app_service.dart';
 import 'core/services/media_service.dart';
 import 'widgets/common/app_icon.dart';
+import 'widgets/common/glow_divider.dart';
+import 'widgets/common/holo_container.dart';
 import 'widgets/digital_clock.dart';
 import 'widgets/app_context_menu.dart';
 
@@ -97,7 +97,9 @@ class OngoingNotificationData {
 
     if (!indeterminate && map['progress'] is num) {
       final cur = (map['progress'] as num).toDouble();
-      final max = (map['maxProgress'] is num) ? (map['maxProgress'] as num).toDouble() : 0.0;
+      final max = (map['maxProgress'] is num)
+          ? (map['maxProgress'] as num).toDouble()
+          : 0.0;
       if (max > 0) {
         parsedProgress = (cur / max).clamp(0.0, 1.0);
       } else if (cur > 0.0 && cur <= 1.0) {
@@ -116,16 +118,15 @@ class OngoingNotificationData {
       }
     }
 
-    final bool ongoing = (map['isOngoing'] as bool?) ??
-        (map['ongoing'] as bool?) ??
-        true;
+    final bool ongoing =
+        (map['isOngoing'] as bool?) ?? (map['ongoing'] as bool?) ?? true;
 
     final rawIcon = map['iconBytes'];
     final iconBytes = rawIcon is Uint8List
         ? rawIcon
         : (rawIcon is List
-            ? Uint8List.fromList(rawIcon.whereType<int>().toList())
-            : null);
+              ? Uint8List.fromList(rawIcon.whereType<int>().toList())
+              : null);
 
     final rawWhen = map['when'];
 
@@ -141,18 +142,24 @@ class OngoingNotificationData {
       summaryText: (map['summaryText'] as String?) ?? '',
       conversationTitle: (map['conversationTitle'] as String?) ?? '',
       tickerText: (map['tickerText'] as String?) ?? '',
-      textLines: (map['textLines'] as List?)
+      textLines:
+          (map['textLines'] as List?)
               ?.map((e) => e.toString())
               .where((e) => e.isNotEmpty)
               .toList() ??
           [],
-      messages: (map['messages'] as List?)
+      messages:
+          (map['messages'] as List?)
               ?.whereType<Map>()
-              .map((e) => NotificationMessage.fromMap(Map<String, dynamic>.from(e)))
+              .map(
+                (e) =>
+                    NotificationMessage.fromMap(Map<String, dynamic>.from(e)),
+              )
               .where((m) => m.text.isNotEmpty)
               .toList() ??
           [],
-      actions: (map['actions'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      actions:
+          (map['actions'] as List?)?.map((e) => e.toString()).toList() ?? [],
       iconBytes: iconBytes,
       progress: parsedProgress,
       progressIndeterminate: indeterminate,
@@ -165,28 +172,28 @@ class OngoingNotificationData {
 
   /// Signature of every value that should bring a hidden notification back.
   String get signature => [
-        key,
-        packageName,
-        title,
-        bigTitle,
-        content,
-        bigText,
-        subText,
-        infoText,
-        summaryText,
-        conversationTitle,
-        tickerText,
-        textLines.join('\u0001'),
-        messages.map((m) => '${m.sender}\u0002${m.text}').join('\u0001'),
-        actions.join('\u0001'),
-        progress?.toString() ?? '',
-        progressIndeterminate.toString(),
-        usesChronometer.toString(),
-        chronometerCountDown.toString(),
-        timestamp?.toString() ?? '',
-        isOngoing.toString(),
-        (iconBytes?.length ?? 0).toString(),
-      ].join('\u0003');
+    key,
+    packageName,
+    title,
+    bigTitle,
+    content,
+    bigText,
+    subText,
+    infoText,
+    summaryText,
+    conversationTitle,
+    tickerText,
+    textLines.join('\u0001'),
+    messages.map((m) => '${m.sender}\u0002${m.text}').join('\u0001'),
+    actions.join('\u0001'),
+    progress?.toString() ?? '',
+    progressIndeterminate.toString(),
+    usesChronometer.toString(),
+    chronometerCountDown.toString(),
+    timestamp?.toString() ?? '',
+    isOngoing.toString(),
+    (iconBytes?.length ?? 0).toString(),
+  ].join('\u0003');
 }
 
 // ==============================================================
@@ -218,8 +225,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const MethodChannel _notificationChannel =
-      MethodChannel('launcher/notifications');
+  static const MethodChannel _notificationChannel = MethodChannel(
+    'launcher/notifications',
+  );
 
   MediaInfo? mediaInfo;
   bool digitalClock = false;
@@ -335,12 +343,14 @@ class _HomePageState extends State<HomePage> {
     final notification = _activeNotification;
     if (notification == null || notification.key.isEmpty) return;
     HapticFeedback.mediumImpact();
-    _notificationChannel.invokeMethod('triggerAction', {
-      'key': notification.key,
-      'actionIndex': index,
-    }).catchError((e) {
-      debugPrint("Native action error: $e");
-    });
+    _notificationChannel
+        .invokeMethod('triggerAction', {
+          'key': notification.key,
+          'actionIndex': index,
+        })
+        .catchError((e) {
+          debugPrint("Native action error: $e");
+        });
   }
 
   // --- MEDIA CONTROLLER ---
@@ -379,15 +389,22 @@ class _HomePageState extends State<HomePage> {
         content: TextField(
           controller: htmlController,
           maxLines: 8,
-          style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13),
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'monospace',
+            fontSize: 13,
+          ),
           decoration: InputDecoration(
-            hintText: "<h1>Hello</h1>\n<p style='color:white'>Write HTML/CSS...</p>",
+            hintText:
+                "<h1>Hello</h1>\n<p style='color:white'>Write HTML/CSS...</p>",
             hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
             filled: true,
             fillColor: Colors.black.withValues(alpha: 0.4),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.15),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -398,13 +415,18 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("CANCEL", style: TextStyle(color: Colors.white60, letterSpacing: 0.8)),
+            child: const Text(
+              "CANCEL",
+              style: TextStyle(color: Colors.white60, letterSpacing: 0.8),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.holoCyan,
               foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
               if (htmlController.text.trim().isNotEmpty) {
@@ -412,7 +434,10 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
               }
             },
-            child: const Text("APPLY", style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+            child: const Text(
+              "APPLY",
+              style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.8),
+            ),
           ),
         ],
       ),
@@ -457,11 +482,20 @@ class _HomePageState extends State<HomePage> {
                 decoration: BoxDecoration(
                   color: AppColors.holoCyan.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.holoCyan.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.holoCyan.withValues(alpha: 0.3),
+                  ),
                 ),
-                child: const Icon(Icons.code_rounded, color: AppColors.holoCyan, size: 20),
+                child: const Icon(
+                  Icons.code_rounded,
+                  color: AppColors.holoCyan,
+                  size: 20,
+                ),
               ),
-              title: const Text("Write HTML / CSS Code", style: TextStyle(color: Colors.white, fontSize: 14)),
+              title: const Text(
+                "Write HTML / CSS Code",
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _showWriteHtmlDialog();
@@ -483,7 +517,10 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
         ),
-        title: const Text("REMOVE WIDGET", style: TextStyle(color: Colors.white, fontSize: 14, letterSpacing: 1)),
+        title: const Text(
+          "REMOVE WIDGET",
+          style: TextStyle(color: Colors.white, fontSize: 14, letterSpacing: 1),
+        ),
         content: const Text(
           "Delete this custom widget from your launcher space?",
           style: TextStyle(color: Colors.white70, fontSize: 13),
@@ -491,13 +528,18 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("CANCEL", style: TextStyle(color: AppColors.holoCyan)),
+            child: const Text(
+              "CANCEL",
+              style: TextStyle(color: AppColors.holoCyan),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
               widget.onRemoveWidget(htmlContent);
@@ -508,10 +550,6 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-
-  Widget _buildDockIcon(AppInfo app) {
-    return AppIcon(app: app);
   }
 
   @override
@@ -526,333 +564,389 @@ class _HomePageState extends State<HomePage> {
             // 1. HERO WIDGET STACK
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 26, 16, 0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    height: _kHeroWidgetHeight,
-                    decoration: BoxDecoration(
-                      color: AppColors.holoSurface,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: AppColors.holoCyan.withValues(alpha: 0.22),
-                        width: 1.0,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          height: 2,
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.transparent, AppColors.holoCyan, Colors.transparent],
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: PageView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            controller: _pageController,
-                            children: [
-                              // 0: CLOCK
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() => digitalClock = !digitalClock);
-                                  HapticFeedback.selectionClick();
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: Column(
-                                  children: [
-                                    Expanded(
-                                      child: Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 20.0, vertical: 8.0),
-                                          child: FittedBox(
-                                            fit: BoxFit.contain,
-                                            child: AnimatedCrossFade(
-                                              firstChild: const Padding(
-                                                padding: EdgeInsets.all(12.0),
-                                                child: DigitalClock(),
-                                              ),
-                                              secondChild: const Padding(
-                                                padding: EdgeInsets.all(12.0),
-                                                child: AnimatedAnalogClock(),
-                                              ),
-                                              crossFadeState: digitalClock
-                                                  ? CrossFadeState.showFirst
-                                                  : CrossFadeState.showSecond,
-                                              duration: AppDurations.fast,
-                                            ),
+              child: HoloContainer(
+                height: _kHeroWidgetHeight,
+                borderRadius: AppDimensions.borderRadiusMedium,
+                child: Column(
+                  children: [
+                    const HoloTopGlow(),
+                    Expanded(
+                      child: PageView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        controller: _pageController,
+                        children: [
+                          // 0: CLOCK
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => digitalClock = !digitalClock);
+                              HapticFeedback.selectionClick();
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20.0,
+                                        vertical: 8.0,
+                                      ),
+                                      child: FittedBox(
+                                        fit: BoxFit.contain,
+                                        child: AnimatedCrossFade(
+                                          firstChild: const Padding(
+                                            padding: EdgeInsets.all(12.0),
+                                            child: DigitalClock(),
                                           ),
+                                          secondChild: const Padding(
+                                            padding: EdgeInsets.all(12.0),
+                                            child: AnimatedAnalogClock(),
+                                          ),
+                                          crossFadeState: digitalClock
+                                              ? CrossFadeState.showFirst
+                                              : CrossFadeState.showSecond,
+                                          duration: AppDurations.fast,
                                         ),
                                       ),
                                     ),
-                                    Text(
-                                      "TAP TO SWITCH TO ${digitalClock ? "ANALOG" : "DIGITAL"}",
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.4),
-                                        fontSize: 10,
-                                        letterSpacing: 1.0,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                                Text(
+                                  "TAP TO SWITCH TO ${digitalClock ? "ANALOG" : "DIGITAL"}",
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.4),
+                                    fontSize: 10,
+                                    letterSpacing: 1.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ),
 
-                              // 1: CALENDAR
-                              Center(
-                                child: SingleChildScrollView(
-                                  physics: const BouncingScrollPhysics(),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: TableCalendar(
-                                    firstDay: DateTime.utc(2010, 10, 16),
-                                    lastDay: DateTime.utc(2030, 3, 14),
-                                    focusedDay: DateTime.now(),
-                                    rowHeight: 33,
-                                    daysOfWeekHeight: 18,
-                                    calendarStyle: CalendarStyle(
-                                      defaultTextStyle: const TextStyle(
-                                          color: Colors.white, fontSize: 12, fontWeight: FontWeight.w400),
-                                      weekendTextStyle: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
-                                      todayDecoration: BoxDecoration(
-                                        color: AppColors.holoCyan.withValues(alpha: 0.2),
-                                        shape: BoxShape.rectangle,
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: AppColors.holoCyan, width: 1.2),
-                                      ),
-                                      selectedDecoration: BoxDecoration(
-                                        color: AppColors.holoCyan,
-                                        shape: BoxShape.rectangle,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
+                          // 1: CALENDAR
+                          Center(
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
+                              child: TableCalendar(
+                                firstDay: DateTime.utc(2010, 10, 16),
+                                lastDay: DateTime.utc(2030, 3, 14),
+                                focusedDay: DateTime.now(),
+                                rowHeight: 33,
+                                daysOfWeekHeight: 18,
+                                calendarStyle: CalendarStyle(
+                                  defaultTextStyle: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  weekendTextStyle: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.55),
+                                    fontSize: 12,
+                                  ),
+                                  todayDecoration: BoxDecoration(
+                                    color: AppColors.holoCyan.withValues(
+                                      alpha: 0.2,
                                     ),
-                                    headerStyle: const HeaderStyle(
-                                      headerPadding: EdgeInsets.symmetric(vertical: 4),
-                                      titleTextStyle: TextStyle(
-                                          color: AppColors.holoCyan,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.8),
-                                      formatButtonVisible: false,
-                                      leftChevronIcon:
-                                          Icon(Icons.chevron_left_rounded, color: Colors.white70, size: 20),
-                                      rightChevronIcon:
-                                          Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 20),
+                                    shape: BoxShape.rectangle,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppColors.holoCyan,
+                                      width: 1.2,
                                     ),
+                                  ),
+                                  selectedDecoration: BoxDecoration(
+                                    color: AppColors.holoCyan,
+                                    shape: BoxShape.rectangle,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                headerStyle: const HeaderStyle(
+                                  headerPadding: EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  titleTextStyle: TextStyle(
+                                    color: AppColors.holoCyan,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.8,
+                                  ),
+                                  formatButtonVisible: false,
+                                  leftChevronIcon: Icon(
+                                    Icons.chevron_left_rounded,
+                                    color: Colors.white70,
+                                    size: 20,
+                                  ),
+                                  rightChevronIcon: Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.white70,
+                                    size: 20,
                                   ),
                                 ),
                               ),
+                            ),
+                          ),
 
-                              // 2: MEDIA PLAYER
-                              Center(
-                                child: mediaInfo == null
-                                    ? Text(
-                                        "NO MEDIA PLAYING",
-                                        style: TextStyle(
-                                            color: Colors.white.withValues(alpha: 0.4),
-                                            fontSize: 11,
-                                            letterSpacing: 1.4,
-                                            fontWeight: FontWeight.w600),
-                                      )
-                                    : SingleChildScrollView(
-                                        physics: const BouncingScrollPhysics(),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20.0, vertical: 8.0),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                          // 2: MEDIA PLAYER
+                          Center(
+                            child: mediaInfo == null
+                                ? Text(
+                                    "NO MEDIA PLAYING",
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                      fontSize: 11,
+                                      letterSpacing: 1.4,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                                : SingleChildScrollView(
+                                    physics: const BouncingScrollPhysics(),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20.0,
+                                      vertical: 8.0,
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Row(
                                           children: [
-                                            Row(
-                                              children: [
-                                                ClipRRect(
-                                                  borderRadius: BorderRadius.circular(10),
-                                                  child: mediaInfo!.thumbnailUrl != null &&
-                                                          mediaInfo!.thumbnailUrl!.isNotEmpty
-                                                      ? Image.network(
-                                                          mediaInfo!.thumbnailUrl!,
-                                                          width: 64,
-                                                          height: 64,
-                                                          fit: BoxFit.cover,
-                                                          errorBuilder: (_, __, ___) => Container(
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              child:
+                                                  mediaInfo!
+                                                      .thumbnailUrl
+                                                      .isNotEmpty
+                                                  ? Image.network(
+                                                      mediaInfo!.thumbnailUrl,
+                                                      width: 64,
+                                                      height: 64,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (_, _, _) =>
+                                                          Container(
                                                             width: 64,
                                                             height: 64,
-                                                            color: Colors.white.withValues(alpha: 0.05),
-                                                            child: const Icon(Icons.music_note_rounded,
-                                                                size: 30, color: AppColors.holoCyan),
+                                                            color: Colors.white
+                                                                .withValues(
+                                                                  alpha: 0.05,
+                                                                ),
+                                                            child: const Icon(
+                                                              Icons
+                                                                  .music_note_rounded,
+                                                              size: 30,
+                                                              color: AppColors
+                                                                  .holoCyan,
+                                                            ),
                                                           ),
-                                                        )
-                                                      : Container(
-                                                          width: 64,
-                                                          height: 64,
-                                                          color: Colors.white.withValues(alpha: 0.05),
-                                                          child: const Icon(Icons.music_note_rounded,
-                                                              size: 30, color: AppColors.holoCyan),
-                                                        ),
-                                                ),
-                                                const SizedBox(width: 14),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        mediaInfo!.track,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                        style: const TextStyle(
-                                                            fontWeight: FontWeight.w600,
-                                                            fontSize: 15,
-                                                            color: Colors.white),
+                                                    )
+                                                  : Container(
+                                                      width: 64,
+                                                      height: 64,
+                                                      color: Colors.white
+                                                          .withValues(
+                                                            alpha: 0.05,
+                                                          ),
+                                                      child: const Icon(
+                                                        Icons
+                                                            .music_note_rounded,
+                                                        size: 30,
+                                                        color:
+                                                            AppColors.holoCyan,
                                                       ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        mediaInfo!.artist.toUpperCase(),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                        style: const TextStyle(
-                                                            fontSize: 11,
-                                                            fontWeight: FontWeight.w600,
-                                                            letterSpacing: 0.9,
-                                                            color: AppColors.holoCyan),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 14),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                IconButton(
-                                                  iconSize: 28,
-                                                  splashRadius: 22,
-                                                  icon: const Icon(Icons.skip_previous_rounded,
-                                                      color: Colors.white),
-                                                  onPressed: () async {
-                                                    HapticFeedback.lightImpact();
-                                                    await MediaService.previousTrack();
-                                                    await _refreshMedia();
-                                                  },
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Container(
-                                                  decoration: const BoxDecoration(
-                                                    color: AppColors.holoCyan,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: IconButton(
-                                                    iconSize: 30,
-                                                    splashRadius: 26,
-                                                    icon: Icon(
-                                                      mediaInfo!.isPlaying
-                                                          ? Icons.pause_rounded
-                                                          : Icons.play_arrow_rounded,
-                                                      color: const Color(0xFF121417),
                                                     ),
-                                                    onPressed: () async {
-                                                      HapticFeedback.mediumImpact();
-                                                      await MediaService.playPause();
-                                                      await _refreshMedia();
-                                                    },
+                                            ),
+                                            const SizedBox(width: 14),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    mediaInfo!.track,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 15,
+                                                      color: Colors.white,
+                                                    ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                IconButton(
-                                                  iconSize: 28,
-                                                  splashRadius: 22,
-                                                  icon: const Icon(Icons.skip_next_rounded,
-                                                      color: Colors.white),
-                                                  onPressed: () async {
-                                                    HapticFeedback.lightImpact();
-                                                    await MediaService.nextTrack();
-                                                    await _refreshMedia();
-                                                  },
-                                                ),
-                                              ],
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    mediaInfo!.artist
+                                                        .toUpperCase(),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      letterSpacing: 0.9,
+                                                      color: AppColors.holoCyan,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                              ),
-
-                              // 3+: CUSTOM USER WIDGETS
-                              ...widget.userWidgets.map((htmlContent) {
-                                return GestureDetector(
-                                  onLongPress: () => _showRemoveWidgetDialog(htmlContent),
-                                  child: Center(
-                                    child: SingleChildScrollView(
-                                      physics: const BouncingScrollPhysics(),
-                                      padding: const EdgeInsets.all(14.0),
-                                      child: HtmlWidget(
-                                        htmlContent,
-                                        textStyle: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 15.0,
+                                        const SizedBox(height: 14),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            IconButton(
+                                              iconSize: 28,
+                                              splashRadius: 22,
+                                              icon: const Icon(
+                                                Icons.skip_previous_rounded,
+                                                color: Colors.white,
+                                              ),
+                                              onPressed: () async {
+                                                HapticFeedback.lightImpact();
+                                                await MediaService.previousTrack();
+                                                await _refreshMedia();
+                                              },
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Container(
+                                              decoration: const BoxDecoration(
+                                                color: AppColors.holoCyan,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: IconButton(
+                                                iconSize: 30,
+                                                splashRadius: 26,
+                                                icon: Icon(
+                                                  mediaInfo!.isPlaying
+                                                      ? Icons.pause_rounded
+                                                      : Icons
+                                                            .play_arrow_rounded,
+                                                  color: const Color(
+                                                    0xFF121417,
+                                                  ),
+                                                ),
+                                                onPressed: () async {
+                                                  HapticFeedback.mediumImpact();
+                                                  await MediaService.playPause();
+                                                  await _refreshMedia();
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            IconButton(
+                                              iconSize: 28,
+                                              splashRadius: 22,
+                                              icon: const Icon(
+                                                Icons.skip_next_rounded,
+                                                color: Colors.white,
+                                              ),
+                                              onPressed: () async {
+                                                HapticFeedback.lightImpact();
+                                                await MediaService.nextTrack();
+                                                await _refreshMedia();
+                                              },
+                                            ),
+                                          ],
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ),
-                                );
-                              }),
+                          ),
 
-                              // LAST: ADD WIDGET BUTTON
-                              Center(
-                                child: GestureDetector(
-                                  onTap: _showAddWidgetSheet,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.white.withValues(alpha: 0.05),
-                                          border: Border.all(
-                                              color: AppColors.holoCyan.withValues(alpha: 0.5),
-                                              width: 1.2),
-                                        ),
-                                        child: const Icon(Icons.add_rounded,
-                                            size: 32, color: AppColors.holoCyan),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        "Add Widget",
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.7),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
+                          // 3+: CUSTOM USER WIDGETS
+                          ...widget.userWidgets.map((htmlContent) {
+                            return GestureDetector(
+                              onLongPress: () =>
+                                  _showRemoveWidgetDialog(htmlContent),
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: const EdgeInsets.all(14.0),
+                                  child: HtmlWidget(
+                                    htmlContent,
+                                    textStyle: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15.0,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: SmoothPageIndicator(
-                            controller: _pageController,
-                            count: 4 + widget.userWidgets.length,
-                            effect: const ExpandingDotsEffect(
-                              activeDotColor: AppColors.holoCyan,
-                              dotColor: Colors.white24,
-                              dotHeight: 5,
-                              dotWidth: 5,
-                              expansionFactor: 3.0,
-                              spacing: 5,
+                            );
+                          }),
+
+                          // LAST: ADD WIDGET BUTTON
+                          Center(
+                            child: GestureDetector(
+                              onTap: _showAddWidgetSheet,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.05,
+                                      ),
+                                      border: Border.all(
+                                        color: AppColors.holoCyan.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.add_rounded,
+                                      size: 32,
+                                      color: AppColors.holoCyan,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    "Add Widget",
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: SmoothPageIndicator(
+                        controller: _pageController,
+                        count: 4 + widget.userWidgets.length,
+                        effect: const ExpandingDotsEffect(
+                          activeDotColor: AppColors.holoCyan,
+                          dotColor: Colors.white24,
+                          dotHeight: 5,
+                          dotWidth: 5,
+                          expansionFactor: 3.0,
+                          spacing: 5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -888,36 +982,20 @@ class _HomePageState extends State<HomePage> {
                         onActionTap: _triggerNotificationAction,
                       )
                     : (showRestorePill
-                        ? _HoloRestoreConsole(
-                            key: const ValueKey('holo_restore_pill'),
-                            onRestore: _restoreNotification,
-                          )
-                        : const SizedBox.shrink()),
+                          ? _HoloRestoreConsole(
+                              key: const ValueKey('holo_restore_pill'),
+                              onRestore: _restoreNotification,
+                            )
+                          : const SizedBox.shrink()),
               ),
             ),
 
             // 4. CYAN GLOW DIVIDER
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              child: Container(
-                height: 1.5,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.holoCyan.withValues(alpha: 0.1),
-                      AppColors.holoCyan.withValues(alpha: 1),
-                      AppColors.holoCyan.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.holoCyan.withValues(alpha: 0.3),
-                      blurRadius: 6,
-                      spreadRadius: 0.5,
-                    ),
-                  ],
-                ),
-              ),
+            const GlowDivider(
+              height: 1.5,
+              opacity: 1.0,
+              glow: true,
+              margin: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
             ),
 
             // 5. DOCK
@@ -939,15 +1017,19 @@ class _HomePageState extends State<HomePage> {
                         AppContextMenu.show(
                           context,
                           app: app,
-                          isPinned: widget.pinnedApps.any((a) => a.packageName == app.packageName),
-                          isBlocked: widget.blockedApps.any((a) => a.packageName == app.packageName),
+                          isPinned: widget.pinnedApps.any(
+                            (a) => a.packageName == app.packageName,
+                          ),
+                          isBlocked: widget.blockedApps.any(
+                            (a) => a.packageName == app.packageName,
+                          ),
                           onTogglePin: widget.onTogglePin,
                           onToggleBlock: widget.onToggleBlock,
                         );
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(4),
-                        child: _buildDockIcon(app),
+                        child: AppIcon(app: app),
                       ),
                     );
                   }).toList(),
@@ -994,20 +1076,26 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final details = <String>{
-      if (data.conversationTitle.isNotEmpty) data.conversationTitle,
-      if (data.subText.isNotEmpty) data.subText,
-      if (data.infoText.isNotEmpty) data.infoText,
-      if (data.summaryText.isNotEmpty) data.summaryText,
-      if (data.tickerText.isNotEmpty) data.tickerText,
-    }.where((text) =>
-        text != data.title &&
-        text != data.bigTitle &&
-        text != data.content &&
-        text != data.bigText).toList();
+    final details =
+        <String>{
+              if (data.conversationTitle.isNotEmpty) data.conversationTitle,
+              if (data.subText.isNotEmpty) data.subText,
+              if (data.infoText.isNotEmpty) data.infoText,
+              if (data.summaryText.isNotEmpty) data.summaryText,
+              if (data.tickerText.isNotEmpty) data.tickerText,
+            }
+            .where(
+              (text) =>
+                  text != data.title &&
+                  text != data.bigTitle &&
+                  text != data.content &&
+                  text != data.bigText,
+            )
+            .toList();
 
-    final messages =
-        data.messages.where((message) => message.text != data.content).toList();
+    final messages = data.messages
+        .where((message) => message.text != data.content)
+        .toList();
     final visibleMessages = messages.length > 3
         ? messages.sublist(messages.length - 3)
         : messages;
@@ -1019,359 +1107,359 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
         HapticFeedback.mediumImpact();
         onDismiss();
       },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF0C1014).withValues(alpha: 0.90),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.holoCyan.withValues(alpha: 0.35),
-                width: 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                splashColor: AppColors.holoCyan.withValues(alpha: 0.20),
-                highlightColor: AppColors.holoCyan.withValues(alpha: 0.08),
-                onTap: onOpen,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // TOP HOLO ACCENT STRIP
-                    Container(
-                      height: 1.5,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.holoCyan.withValues(alpha: 0.0),
-                            AppColors.holoCyan.withValues(alpha: 0.8),
-                            AppColors.holoCyan.withValues(alpha: 0.0),
-                          ],
-                        ),
-                      ),
-                    ),
+      child: HoloContainer(
+        borderRadius: 14,
+        sigmaX: 18,
+        sigmaY: 18,
+        color: const Color(0xFF0C1014).withValues(alpha: 0.90),
+        borderColor: AppColors.holoCyan.withValues(alpha: 0.35),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.65),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            splashColor: AppColors.holoCyan.withValues(alpha: 0.20),
+            highlightColor: AppColors.holoCyan.withValues(alpha: 0.08),
+            onTap: onOpen,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // TOP HOLO ACCENT STRIP
+                const HoloTopGlow(height: 1.5, opacity: 0.8),
 
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 11,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. HEADER ROW: APP ICON, PACKAGE & CONTROLS
+                      Row(
                         children: [
-                          // 1. HEADER ROW: APP ICON, PACKAGE & CONTROLS
-                          Row(
-                            children: [
-                              _buildAppIcon(size: 18),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _cleanPackageName(data.packageName),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.55),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.1,
-                                  ),
-                                ),
+                          _buildAppIcon(size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _cleanPackageName(data.packageName),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.55),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.1,
                               ),
-
-                              // OPEN LAUNCH GLYPH
-                              Icon(
-                                Icons.arrow_outward_rounded,
-                                size: 14,
-                                color: AppColors.holoCyan.withValues(alpha: 0.9),
-                              ),
-                              const SizedBox(width: 8),
-
-                              // DISMISS BUTTON
-                              GestureDetector(
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  onDismiss();
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(2.0),
-                                  child: Icon(
-                                    Icons.close_rounded,
-                                    size: 16,
-                                    color: Colors.white.withValues(alpha: 0.45),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 7),
-
-                          // 2. TITLE & CONTENT
-                          Text(
-                            data.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.1,
                             ),
                           ),
 
-                          if (data.bigTitle.isNotEmpty &&
-                              data.bigTitle != data.title) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              data.bigTitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.78),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                height: 1.25,
+                          // OPEN LAUNCH GLYPH
+                          Icon(
+                            Icons.arrow_outward_rounded,
+                            size: 14,
+                            color: AppColors.holoCyan.withValues(alpha: 0.9),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // DISMISS BUTTON
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              onDismiss();
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.all(2.0),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 16,
+                                color: Colors.white.withValues(alpha: 0.45),
                               ),
                             ),
-                          ],
-
-                          if (data.content.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              data.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.65),
-                                fontSize: 11.5,
-                                height: 1.25,
-                              ),
-                            ),
-                          ],
-
-                          if (data.bigText.isNotEmpty &&
-                              data.bigText != data.content) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              data.bigText,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.60),
-                                fontSize: 11,
-                                height: 1.3,
-                              ),
-                            ),
-                          ],
-
-                          // SUBTEXT / INFO / SUMMARY / CONVERSATION / TICKER
-                          if (details.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            for (final detail in details.take(3))
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      '›',
-                                      style: TextStyle(
-                                        color: AppColors.holoCyan,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Expanded(
-                                      child: Text(
-                                        detail,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.45),
-                                          fontSize: 10,
-                                          height: 1.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-
-                          // INBOX-STYLE TEXT LINES
-                          if (data.textLines.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            for (final line in data.textLines.take(4))
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: 3,
-                                      height: 3,
-                                      margin: const EdgeInsets.only(top: 5),
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.holoCyan,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        line,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.58),
-                                          fontSize: 10.5,
-                                          height: 1.25,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-
-                          // MESSAGING-STYLE CONVERSATION (LATEST 3)
-                          if (visibleMessages.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            for (final message in visibleMessages)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 3),
-                                child: Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      if (message.sender.isNotEmpty)
-                                        TextSpan(
-                                          text: '${message.sender.toUpperCase()}  ',
-                                          style: TextStyle(
-                                            color: AppColors.holoCyan
-                                                .withValues(alpha: 0.85),
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.4,
-                                          ),
-                                        ),
-                                      TextSpan(
-                                        text: message.text,
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.62),
-                                          fontSize: 10.5,
-                                          height: 1.25,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                          ],
-
-                          // 3. CHRONOMETER
-                          if (data.usesChronometer && data.timestamp != null) ...[
-                            const SizedBox(height: 8),
-                            _NotificationChronometer(
-                              timestamp: data.timestamp!,
-                              countDown: data.chronometerCountDown,
-                            ),
-                          ],
-
-                          // 4. PROGRESS BAR (INDETERMINATE OR MEASURABLE)
-                          if (data.progressIndeterminate) ...[
-                            const SizedBox(height: 9),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(2),
-                                    child: LinearProgressIndicator(
-                                      value: null,
-                                      minHeight: 4,
-                                      backgroundColor: Colors.white.withValues(alpha: 0.1),
-                                      valueColor: const AlwaysStoppedAnimation<Color>(
-                                          AppColors.holoCyan),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  "LIVE",
-                                  style: TextStyle(
-                                    color: AppColors.holoCyan,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'monospace',
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else if (data.progress != null) ...[
-                            const SizedBox(height: 9),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(2),
-                                    child: LinearProgressIndicator(
-                                      value: data.progress,
-                                      minHeight: 4,
-                                      backgroundColor: Colors.white.withValues(alpha: 0.1),
-                                      valueColor: const AlwaysStoppedAnimation<Color>(
-                                          AppColors.holoCyan),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "${(data.progress! * 100).toInt()}%",
-                                  style: const TextStyle(
-                                    color: AppColors.holoCyan,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'monospace',
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-
-                          // 5. NOTIFICATION ACTIONS
-                          if (data.actions.any((action) => action.trim().isNotEmpty)) ...[
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 7,
-                              runSpacing: 7,
-                              children: [
-                                for (var i = 0; i < data.actions.length; i++)
-                                  if (data.actions[i].trim().isNotEmpty)
-                                    _buildActionButton(i, data.actions[i].trim()),
-                              ],
-                            ),
-                          ],
+                          ),
                         ],
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 7),
+
+                      // 2. TITLE & CONTENT
+                      Text(
+                        data.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+
+                      if (data.bigTitle.isNotEmpty &&
+                          data.bigTitle != data.title) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          data.bigTitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.78),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+
+                      if (data.content.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          data.content,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 11.5,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+
+                      if (data.bigText.isNotEmpty &&
+                          data.bigText != data.content) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          data.bigText,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.60),
+                            fontSize: 11,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+
+                      // SUBTEXT / INFO / SUMMARY / CONVERSATION / TICKER
+                      if (details.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        for (final detail in details.take(3))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '›',
+                                  style: TextStyle(
+                                    color: AppColors.holoCyan,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    detail,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.45,
+                                      ),
+                                      fontSize: 10,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+
+                      // INBOX-STYLE TEXT LINES
+                      if (data.textLines.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        for (final line in data.textLines.take(4))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 3,
+                                  height: 3,
+                                  margin: const EdgeInsets.only(top: 5),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.holoCyan,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    line,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.58,
+                                      ),
+                                      fontSize: 10.5,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+
+                      // MESSAGING-STYLE CONVERSATION (LATEST 3)
+                      if (visibleMessages.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        for (final message in visibleMessages)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  if (message.sender.isNotEmpty)
+                                    TextSpan(
+                                      text: '${message.sender.toUpperCase()}  ',
+                                      style: TextStyle(
+                                        color: AppColors.holoCyan.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  TextSpan(
+                                    text: message.text,
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.62,
+                                      ),
+                                      fontSize: 10.5,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+
+                      // 3. CHRONOMETER
+                      if (data.usesChronometer && data.timestamp != null) ...[
+                        const SizedBox(height: 8),
+                        _NotificationChronometer(
+                          timestamp: data.timestamp!,
+                          countDown: data.chronometerCountDown,
+                        ),
+                      ],
+
+                      // 4. PROGRESS BAR (INDETERMINATE OR MEASURABLE)
+                      if (data.progressIndeterminate) ...[
+                        const SizedBox(height: 9),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(2),
+                                child: LinearProgressIndicator(
+                                  value: null,
+                                  minHeight: 4,
+                                  backgroundColor: Colors.white.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        AppColors.holoCyan,
+                                      ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              "LIVE",
+                              style: TextStyle(
+                                color: AppColors.holoCyan,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'monospace',
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else if (data.progress != null) ...[
+                        const SizedBox(height: 9),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(2),
+                                child: LinearProgressIndicator(
+                                  value: data.progress,
+                                  minHeight: 4,
+                                  backgroundColor: Colors.white.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        AppColors.holoCyan,
+                                      ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "${(data.progress! * 100).toInt()}%",
+                              style: const TextStyle(
+                                color: AppColors.holoCyan,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'monospace',
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+
+                      // 5. NOTIFICATION ACTIONS
+                      if (data.actions.any(
+                        (action) => action.trim().isNotEmpty,
+                      )) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 7,
+                          runSpacing: 7,
+                          children: [
+                            for (var i = 0; i < data.actions.length; i++)
+                              if (data.actions[i].trim().isNotEmpty)
+                                _buildActionButton(i, data.actions[i].trim()),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -1433,7 +1521,11 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
         color: AppColors.holoCyan.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Icon(Icons.navigation_rounded, size: size * 0.7, color: AppColors.holoCyan),
+      child: Icon(
+        Icons.navigation_rounded,
+        size: size * 0.7,
+        color: AppColors.holoCyan,
+      ),
     );
   }
 }
@@ -1492,8 +1584,9 @@ class _NotificationChronometerState extends State<_NotificationChronometer> {
   Widget build(BuildContext context) {
     final target = DateTime.fromMillisecondsSinceEpoch(widget.timestamp);
     final now = DateTime.now();
-    final duration =
-        widget.countDown ? target.difference(now) : now.difference(target);
+    final duration = widget.countDown
+        ? target.difference(now)
+        : now.difference(target);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1528,47 +1621,40 @@ class _NotificationChronometerState extends State<_NotificationChronometer> {
 class _HoloRestoreConsole extends StatelessWidget {
   final VoidCallback onRestore;
 
-  const _HoloRestoreConsole({
-    super.key,
-    required this.onRestore,
-  });
+  const _HoloRestoreConsole({super.key, required this.onRestore});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onRestore,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0C1014).withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.holoCyan.withValues(alpha: 0.25),
-                width: 0.8,
+      child: HoloContainer(
+        height: 34,
+        borderRadius: 8,
+        sigmaX: 12,
+        sigmaY: 12,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        color: const Color(0xFF0C1014).withValues(alpha: 0.75),
+        borderColor: AppColors.holoCyan.withValues(alpha: 0.25),
+        borderWidth: 0.8,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.unfold_more_rounded,
+              size: 14,
+              color: AppColors.holoCyan,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              "STATUS STREAM HIDDEN // TAP TO RESTORE",
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.75),
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.unfold_more_rounded, size: 14, color: AppColors.holoCyan),
-                const SizedBox(width: 7),
-                Text(
-                  "STATUS STREAM HIDDEN // TAP TO RESTORE",
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

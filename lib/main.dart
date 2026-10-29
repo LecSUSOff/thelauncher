@@ -1,9 +1,7 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:device_wallpaper_flutter/device_wallpaper_flutter.dart';
 import 'package:flutter/services.dart';
-import 'package:thelauncher/helpers.dart';
 import 'home.dart';
 import 'applist.dart';
 import 'youhub.dart';
@@ -57,10 +55,8 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   List<String> _userWidgets = [];
   List<AppInfo> _allApps = [];
   bool _isLoading = true;
-  
-  final PageController _rootPageController = PageController(
-    initialPage: 1,
-  );
+
+  final PageController _rootPageController = PageController(initialPage: 1);
 
   @override
   void initState() {
@@ -90,11 +86,12 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   Future<void> _initLauncher() async {
     final allApps = await AppService.getInstalledApps();
     final savedPackages = await AppService.getPinnedPackages();
-    final blockedPackages = await AppService.getBlocokedPackages();
+    final blockedPackages = await AppService.getBlockedPackages();
     final savedWidgets = await AppService.getSavedWidgets();
 
-    // Await the future returned by getAppsInfoFromPackageNames
-    final blockedApps = await getAppsInfoFromPackageNames(blockedPackages);
+    final blockedApps = await AppService.getAppsInfoFromPackageNames(
+      blockedPackages,
+    );
 
     List<String> packagesToUse = savedPackages;
     if (packagesToUse.isEmpty) {
@@ -140,7 +137,9 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
         if (_pinnedApps.length < 5) _pinnedApps.add(app);
       }
     });
-    AppService.savePinnedPackages(_pinnedApps.map((a) => a.packageName).toList());
+    AppService.savePinnedPackages(
+      _pinnedApps.map((a) => a.packageName).toList(),
+    );
   }
 
   void toggleBlockApp(AppInfo app) {
@@ -151,7 +150,9 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
         _blockedApps.add(app);
       }
     });
-    AppService.saveBlockedPackages(_blockedApps.map((a) => a.packageName).toList());
+    AppService.saveBlockedPackages(
+      _blockedApps.map((a) => a.packageName).toList(),
+    );
   }
 
   Future<void> _getCurrentWallpaper() async {
@@ -177,11 +178,9 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
           }
 
           if (_isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
-          
+
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
           return Stack(
@@ -200,10 +199,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
                       child: Transform.scale(
                         scale: 1.15,
                         child: _wallpaperBytes != null
-                            ? Image.memory(
-                                _wallpaperBytes!,
-                                fit: BoxFit.cover,
-                              )
+                            ? Image.memory(_wallpaperBytes!, fit: BoxFit.cover)
                             : const SizedBox.expand(),
                       ),
                     );

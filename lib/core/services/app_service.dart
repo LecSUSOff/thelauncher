@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:installed_apps/app_info.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thelauncher/widgets/pause.dart';
@@ -13,21 +12,43 @@ class AppService {
     );
   }
 
-  static Future<void> launchApp(BuildContext context, String packageName) async {
-  if (await isAppBlocked(packageName)) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        pageBuilder: (_, __, ___) => PauseScreen(packageName: packageName),
-        transitionsBuilder: (_, animation, __, child) => 
-            FadeTransition(opacity: animation, child: child),
-      ),
+  static Future<List<AppInfo>> getAppsInfoFromPackageNames(
+    List<String> packageNames,
+  ) async {
+    final results = await Future.wait(
+      packageNames.map((packageName) async {
+        try {
+          return await InstalledApps.getAppInfo(packageName);
+        } catch (_) {
+          return null;
+        }
+      }),
     );
-    return;
+
+    return results.whereType<AppInfo>().toList();
   }
 
-  InstalledApps.startApp(packageName);
-}
+  static Future<void> launchApp(
+    BuildContext context,
+    String packageName,
+  ) async {
+    if (await isAppBlocked(packageName)) {
+      if (!context.mounted) return;
+
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          opaque: false,
+          pageBuilder: (_, _, _) => PauseScreen(packageName: packageName),
+          transitionsBuilder: (_, animation, _, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+      return;
+    }
+
+    InstalledApps.startApp(packageName);
+  }
+
   static Future<void> openAppSettings(String packageName) async {
     InstalledApps.openSettings(packageName);
   }
@@ -42,12 +63,13 @@ class AppService {
     await prefs.setStringList('pinned_apps', packages);
   }
 
-  static Future<List<String>> getBlocokedPackages() async {
+  static Future<List<String>> getBlockedPackages() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList('blocked_apps') ?? [];
   }
 
-  static Future<bool> isAppBlocked(String PackageName) async => (await getBlocokedPackages()).contains(PackageName);
+  static Future<bool> isAppBlocked(String packageName) async =>
+      (await getBlockedPackages()).contains(packageName);
 
   static Future<void> saveBlockedPackages(List<String> packages) async {
     final prefs = await SharedPreferences.getInstance();
