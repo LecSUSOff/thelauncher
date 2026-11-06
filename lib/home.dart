@@ -44,6 +44,23 @@ class NotificationMessage {
   }
 }
 
+class NotificationAction {
+  final int index;
+  final String title;
+
+  const NotificationAction({required this.index, required this.title});
+
+  factory NotificationAction.fromMap(Map<String, dynamic> map) {
+    final rawIndex = map['index'];
+    return NotificationAction(
+      index: rawIndex is num ? rawIndex.toInt() : 0,
+      title: (map['title'] as String?)?.trim() ?? '',
+    );
+  }
+
+  String get signature => '$index:$title';
+}
+
 class OngoingNotificationData {
   final String key;
   final String packageName;
@@ -58,7 +75,7 @@ class OngoingNotificationData {
   final String tickerText;
   final List<String> textLines;
   final List<NotificationMessage> messages;
-  final List<String> actions;
+  final List<NotificationAction> actions;
   final Uint8List? iconBytes;
   final double? progress;
   final bool progressIndeterminate;
@@ -66,6 +83,9 @@ class OngoingNotificationData {
   final bool chronometerCountDown;
   final int? timestamp;
   final bool isOngoing;
+  final bool hasContentIntent;
+  final bool isSystemPackage;
+  final int rank;
 
   OngoingNotificationData({
     required this.key,
@@ -89,6 +109,9 @@ class OngoingNotificationData {
     this.chronometerCountDown = false,
     this.timestamp,
     this.isOngoing = true,
+    this.hasContentIntent = false,
+    this.isSystemPackage = false,
+    this.rank = 0,
   });
 
   factory OngoingNotificationData.fromMap(Map<String, dynamic> map) {
@@ -130,6 +153,25 @@ class OngoingNotificationData {
 
     final rawWhen = map['when'];
 
+    final rawActions = map['actions'] as List?;
+    final actions = <NotificationAction>[];
+    if (rawActions != null) {
+      for (var i = 0; i < rawActions.length; i++) {
+        final rawAction = rawActions[i];
+        if (rawAction is Map) {
+          final action = NotificationAction.fromMap(
+            Map<String, dynamic>.from(rawAction),
+          );
+          if (action.title.isNotEmpty) actions.add(action);
+        } else {
+          final title = rawAction.toString().trim();
+          if (title.isNotEmpty) {
+            actions.add(NotificationAction(index: i, title: title));
+          }
+        }
+      }
+    }
+
     return OngoingNotificationData(
       key: (map['key'] as String?) ?? '',
       packageName: (map['packageName'] as String?) ?? '',
@@ -158,8 +200,7 @@ class OngoingNotificationData {
               .where((m) => m.text.isNotEmpty)
               .toList() ??
           [],
-      actions:
-          (map['actions'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      actions: actions,
       iconBytes: iconBytes,
       progress: parsedProgress,
       progressIndeterminate: indeterminate,
@@ -167,6 +208,9 @@ class OngoingNotificationData {
       chronometerCountDown: map['chronometerCountDown'] == true,
       timestamp: rawWhen is num ? rawWhen.toInt() : null,
       isOngoing: ongoing,
+      hasContentIntent: map['hasContentIntent'] == true,
+      isSystemPackage: map['isSystemPackage'] == true,
+      rank: (map['rank'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -185,13 +229,14 @@ class OngoingNotificationData {
     tickerText,
     textLines.join('\u0001'),
     messages.map((m) => '${m.sender}\u0002${m.text}').join('\u0001'),
-    actions.join('\u0001'),
+    actions.map((a) => a.signature).join('\u0001'),
     progress?.toString() ?? '',
     progressIndeterminate.toString(),
     usesChronometer.toString(),
     chronometerCountDown.toString(),
     timestamp?.toString() ?? '',
     isOngoing.toString(),
+    hasContentIntent.toString(),
     (iconBytes?.length ?? 0).toString(),
   ].join('\u0003');
 }
@@ -203,8 +248,10 @@ class OngoingNotificationData {
 class HomePage extends StatefulWidget {
   final List<AppInfo> pinnedApps;
   final List<AppInfo> blockedApps;
+  final List<AppInfo> lockedApps;
   final ValueChanged<AppInfo> onTogglePin;
   final ValueChanged<AppInfo> onToggleBlock;
+  final ValueChanged<AppInfo> onToggleLock;
   final List<String> userWidgets;
   final ValueChanged<String> onAddWidget;
   final ValueChanged<String> onRemoveWidget;
@@ -213,8 +260,10 @@ class HomePage extends StatefulWidget {
     super.key,
     required this.pinnedApps,
     required this.blockedApps,
+    required this.lockedApps,
     required this.onTogglePin,
     required this.onToggleBlock,
+    required this.onToggleLock,
     required this.userWidgets,
     required this.onAddWidget,
     required this.onRemoveWidget,
@@ -232,9 +281,24 @@ class _HomePageState extends State<HomePage> {
   MediaInfo? mediaInfo;
   bool digitalClock = false;
 
-  OngoingNotificationData? _activeNotification;
-  OngoingNotificationData? _dismissedNotification;
-  bool _isDismissed = false;
+  List<OngoingNotificationData> _activeNotifications = const [];
+  final Map<String, OngoingNotificationData> _dismissedNotifications = {};
+  int _notificationIndex = 0;
+  String? _manuallySelectedNotificationKey;
+
+  int get _visibleNotificationIndex {
+    if (_activeNotifications.isEmpty) return 0;
+    if (_notificationIndex < 0) return 0;
+    if (_notificationIndex >= _activeNotifications.length) {
+      return _activeNotifications.length - 1;
+    }
+    return _notificationIndex;
+  }
+
+  OngoingNotificationData? get _currentNotification {
+    if (_activeNotifications.isEmpty) return null;
+    return _activeNotifications[_visibleNotificationIndex];
+  }
 
   final PageController _pageController = PageController();
 
@@ -257,36 +321,40 @@ class _HomePageState extends State<HomePage> {
 
   void _initNotificationListener() async {
     _notificationChannel.setMethodCallHandler((call) async {
-      if (call.method == 'onNotificationUpdated') {
-        if (!mounted) return;
-        final payload = call.arguments;
-
-        setState(() {
-          if (payload == null) {
-            _activeNotification = null;
-            _dismissedNotification = null;
-            _isDismissed = false;
-          } else {
-            final map = Map<String, dynamic>.from(payload as Map);
-            final updated = OngoingNotificationData.fromMap(map);
-
-            // Filter: ONLY display ongoing notifications
-            if (!updated.isOngoing) {
-              _activeNotification = null;
-              _dismissedNotification = null;
-              _isDismissed = false;
-              return;
-            }
-
-            if (_isDismissed && _dismissedNotification?.key == updated.key) {
-              if (_dismissedNotification?.signature != updated.signature) {
-                _isDismissed = false;
-              }
-            }
-            _activeNotification = updated;
-          }
-        });
+      if (call.method != 'onNotificationsUpdated' &&
+          call.method != 'onNotificationUpdated') {
+        return;
       }
+      if (!mounted) return;
+      final payload = call.arguments;
+
+      setState(() {
+        if (payload == null) {
+          _activeNotifications = const [];
+          _dismissedNotifications.clear();
+          _notificationIndex = 0;
+          _manuallySelectedNotificationKey = null;
+          return;
+        }
+
+        final incoming = <OngoingNotificationData>[];
+        if (payload is List) {
+          for (final entry in payload.whereType<Map>()) {
+            incoming.add(
+              OngoingNotificationData.fromMap(Map<String, dynamic>.from(entry)),
+            );
+          }
+        } else if (payload is Map) {
+          // Backwards compatible with the old single-notification payload.
+          incoming.add(
+            OngoingNotificationData.fromMap(Map<String, dynamic>.from(payload)),
+          );
+        }
+
+        _applyNotificationBatch(
+          incoming.where((notification) => notification.isOngoing).toList(),
+        );
+      });
     });
 
     try {
@@ -303,57 +371,141 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _dismissNotification() {
-    if (_activeNotification == null) return;
-    HapticFeedback.lightImpact();
+  void _applyNotificationBatch(List<OngoingNotificationData> incoming) {
+    final incomingByKey = <String, OngoingNotificationData>{
+      for (final notification in incoming) notification.key: notification,
+    };
+
+    // A hidden notification comes back when its content changes.
+    _dismissedNotifications.removeWhere((key, dismissed) {
+      final updated = incomingByKey[key];
+      return updated == null || updated.signature != dismissed.signature;
+    });
+
+    final visible = incoming
+        .where(
+          (notification) =>
+              !_dismissedNotifications.containsKey(notification.key),
+        )
+        .toList();
+
+    _activeNotifications = visible;
+
+    final manualKey = _manuallySelectedNotificationKey;
+    if (manualKey != null) {
+      final manualIndex = visible.indexWhere(
+        (notification) => notification.key == manualKey,
+      );
+      if (manualIndex >= 0) {
+        _notificationIndex = manualIndex;
+        return;
+      }
+      _manuallySelectedNotificationKey = null;
+    }
+
+    // No manual selection means the highest-ranked notification stays visible.
+    _notificationIndex = 0;
+  }
+
+  void _moveNotification(int delta) {
+    if (_activeNotifications.length < 2) return;
+    HapticFeedback.selectionClick();
     setState(() {
-      _dismissedNotification = _activeNotification;
-      _isDismissed = true;
+      _notificationIndex =
+          (_visibleNotificationIndex + delta) % _activeNotifications.length;
+      if (_notificationIndex < 0) {
+        _notificationIndex += _activeNotifications.length;
+      }
+      _manuallySelectedNotificationKey = _notificationIndex == 0
+          ? null
+          : _activeNotifications[_notificationIndex].key;
+    });
+  }
+
+  void _dismissNotification() {
+    final notification = _currentNotification;
+    if (notification == null) return;
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _dismissedNotifications[notification.key] = notification;
+      _activeNotifications = _activeNotifications
+          .where((item) => item.key != notification.key)
+          .toList();
+      if (_manuallySelectedNotificationKey == notification.key) {
+        _manuallySelectedNotificationKey = null;
+      }
+      if (_notificationIndex >= _activeNotifications.length) {
+        _notificationIndex = 0;
+      }
     });
   }
 
   void _restoreNotification() {
+    if (_dismissedNotifications.isEmpty) return;
     HapticFeedback.mediumImpact();
     setState(() {
-      _isDismissed = false;
+      final restored = <OngoingNotificationData>[
+        ..._activeNotifications,
+        ..._dismissedNotifications.values,
+      ]..sort((a, b) => b.rank.compareTo(a.rank));
+      _activeNotifications = restored;
+      _dismissedNotifications.clear();
+      _notificationIndex = 0;
+      _manuallySelectedNotificationKey = null;
     });
   }
 
-  void _openNotification() {
-    if (_activeNotification == null) return;
+  Future<void> _openNotification() async {
     HapticFeedback.lightImpact();
+    await _openCurrentNotification();
+  }
 
-    final key = _activeNotification!.key;
-    final pkg = _activeNotification!.packageName;
+  Future<void> _openCurrentNotification() async {
+    final notification = _currentNotification;
+    if (notification == null) return;
 
-    // 1. Invoke native notification pending intent
-    if (key.isNotEmpty) {
-      _notificationChannel.invokeMethod('open', {'key': key}).catchError((e) {
+    var opened = false;
+    if (notification.key.isNotEmpty) {
+      try {
+        opened =
+            await _notificationChannel.invokeMethod<bool>('open', {
+              'key': notification.key,
+            }) ??
+            false;
+      } catch (e) {
         debugPrint("Native open error: $e");
-      });
+      }
     }
 
-    // 2. Concurrently launch the app package so opening is 100% reliable
-    if (pkg.isNotEmpty) {
-      AppService.launchApp(context, pkg);
+    if (!opened &&
+        notification.packageName.isNotEmpty &&
+        !notification.isSystemPackage &&
+        mounted) {
+      await AppService.launchApp(context, notification.packageName);
     }
   }
 
-  void _triggerNotificationAction(int index) {
-    final notification = _activeNotification;
+  Future<void> _triggerNotificationAction(int index) async {
+    final notification = _currentNotification;
     if (notification == null || notification.key.isEmpty) return;
     HapticFeedback.mediumImpact();
-    _notificationChannel
-        .invokeMethod('triggerAction', {
-          'key': notification.key,
-          'actionIndex': index,
-        })
-        .catchError((e) {
-          debugPrint("Native action error: $e");
-        });
-  }
 
-  // --- MEDIA CONTROLLER ---
+    var handled = false;
+    try {
+      handled =
+          await _notificationChannel.invokeMethod<bool>('triggerAction', {
+            'key': notification.key,
+            'actionIndex': index,
+          }) ??
+          false;
+    } catch (e) {
+      debugPrint("Native action error: $e");
+    }
+
+    if (!handled) {
+      await _openCurrentNotification();
+    }
+  }
 
   Future<void> _initMediaController() async {
     final info = await MediaService.getCurrentMediaInfo();
@@ -365,8 +517,6 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() => mediaInfo = info);
   }
 
-  // --- WIDGET MANAGEMENT ---
-
   void _showWriteHtmlDialog() {
     final TextEditingController htmlController = TextEditingController();
     showDialog(
@@ -377,8 +527,8 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: AppColors.holoCyan.withValues(alpha: 0.3)),
         ),
-        title: const Text(
-          "CODE WIDGET",
+        title: Text(
+          "Use HTML to create a widget",
           style: TextStyle(
             color: AppColors.holoCyan,
             fontSize: 14,
@@ -408,7 +558,7 @@ class _HomePageState extends State<HomePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.holoCyan),
+              borderSide: BorderSide(color: AppColors.holoCyan),
             ),
           ),
         ),
@@ -467,7 +617,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 16),
             const Text(
-              "ADD CUSTOM WIDGET",
+              "Add a custom widget",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -486,7 +636,7 @@ class _HomePageState extends State<HomePage> {
                     color: AppColors.holoCyan.withValues(alpha: 0.3),
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.code_rounded,
                   color: AppColors.holoCyan,
                   size: 20,
@@ -518,18 +668,18 @@ class _HomePageState extends State<HomePage> {
           side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
         ),
         title: const Text(
-          "REMOVE WIDGET",
+          "Remove widget",
           style: TextStyle(color: Colors.white, fontSize: 14, letterSpacing: 1),
         ),
         content: const Text(
-          "Delete this custom widget from your launcher space?",
+          "Delete this custom widget from CandyOS homescreen?",
           style: TextStyle(color: Colors.white70, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              "CANCEL",
+            child: Text(
+              "Cancel",
               style: TextStyle(color: AppColors.holoCyan),
             ),
           ),
@@ -554,8 +704,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final showLiveActivity = _activeNotification != null && !_isDismissed;
-    final showRestorePill = _activeNotification != null && _isDismissed;
+    final currentNotification = _currentNotification;
+    final showRestorePill =
+        currentNotification == null && _dismissedNotifications.isNotEmpty;
 
     return Stack(
       children: [
@@ -666,7 +817,7 @@ class _HomePageState extends State<HomePage> {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                 ),
-                                headerStyle: const HeaderStyle(
+                                headerStyle: HeaderStyle(
                                   headerPadding: EdgeInsets.symmetric(
                                     vertical: 4,
                                   ),
@@ -738,7 +889,7 @@ class _HomePageState extends State<HomePage> {
                                                                 .withValues(
                                                                   alpha: 0.05,
                                                                 ),
-                                                            child: const Icon(
+                                                            child: Icon(
                                                               Icons
                                                                   .music_note_rounded,
                                                               size: 30,
@@ -754,7 +905,7 @@ class _HomePageState extends State<HomePage> {
                                                           .withValues(
                                                             alpha: 0.05,
                                                           ),
-                                                      child: const Icon(
+                                                      child: Icon(
                                                         Icons
                                                             .music_note_rounded,
                                                         size: 30,
@@ -788,7 +939,7 @@ class _HomePageState extends State<HomePage> {
                                                     maxLines: 1,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 11,
                                                       fontWeight:
                                                           FontWeight.w600,
@@ -821,7 +972,7 @@ class _HomePageState extends State<HomePage> {
                                             ),
                                             const SizedBox(width: 12),
                                             Container(
-                                              decoration: const BoxDecoration(
+                                              decoration: BoxDecoration(
                                                 color: AppColors.holoCyan,
                                                 shape: BoxShape.circle,
                                               ),
@@ -907,7 +1058,7 @@ class _HomePageState extends State<HomePage> {
                                         width: 1.2,
                                       ),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.add_rounded,
                                       size: 32,
                                       color: AppColors.holoCyan,
@@ -932,11 +1083,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: EdgeInsets.only(bottom: 8),
                       child: SmoothPageIndicator(
                         controller: _pageController,
                         count: 4 + widget.userWidgets.length,
-                        effect: const ExpandingDotsEffect(
+                        effect: ExpandingDotsEffect(
                           activeDotColor: AppColors.holoCyan,
                           dotColor: Colors.white24,
                           dotHeight: 5,
@@ -954,7 +1105,6 @@ class _HomePageState extends State<HomePage> {
             // 2. OPEN WALLPAPER SPACE
             const Spacer(),
 
-            // 3. HOLO × FLAT ONGOING NOTIFICATION CONSOLE
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: AnimatedSwitcher(
@@ -973,10 +1123,14 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                 },
-                child: showLiveActivity
+                child: currentNotification != null
                     ? _HoloOngoingNotificationCard(
-                        key: ValueKey(_activeNotification!.key),
-                        data: _activeNotification!,
+                        key: ValueKey(currentNotification.key),
+                        data: currentNotification,
+                        currentIndex: _visibleNotificationIndex,
+                        totalCount: _activeNotifications.length,
+                        onPrevious: () => _moveNotification(-1),
+                        onNext: () => _moveNotification(1),
                         onOpen: _openNotification,
                         onDismiss: _dismissNotification,
                         onActionTap: _triggerNotificationAction,
@@ -1023,8 +1177,12 @@ class _HomePageState extends State<HomePage> {
                           isBlocked: widget.blockedApps.any(
                             (a) => a.packageName == app.packageName,
                           ),
+                          isLocked: widget.lockedApps.any(
+                            (a) => a.packageName == app.packageName,
+                          ),
                           onTogglePin: widget.onTogglePin,
                           onToggleBlock: widget.onToggleBlock,
+                          onToggleLock:  widget.onToggleLock
                         );
                       },
                       child: Padding(
@@ -1043,12 +1201,12 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ==============================================================
-// HOLO × FLAT ONGOING NOTIFICATION CARD (SWIPE + DIRECT TAP)
-// ==============================================================
-
 class _HoloOngoingNotificationCard extends StatelessWidget {
   final OngoingNotificationData data;
+  final int currentIndex;
+  final int totalCount;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
   final VoidCallback onOpen;
   final VoidCallback onDismiss;
   final ValueChanged<int> onActionTap;
@@ -1056,13 +1214,17 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
   const _HoloOngoingNotificationCard({
     super.key,
     required this.data,
+    required this.currentIndex,
+    required this.totalCount,
+    required this.onPrevious,
+    required this.onNext,
     required this.onOpen,
     required this.onDismiss,
     required this.onActionTap,
   });
 
   String _cleanPackageName(String pkg) {
-    if (pkg.contains('google.android.apps.maps')) return 'GOOGLE MAPS';
+    if (pkg.contains('google.android.apps.maps')) return 'Maps';
     if (pkg.contains('.')) {
       final parts = pkg.split('.');
       final last = parts.last;
@@ -1103,16 +1265,12 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
     return Dismissible(
       key: ValueKey(data.key.isNotEmpty ? data.key : data.packageName),
       direction: DismissDirection.horizontal,
-      onDismissed: (_) {
-        HapticFeedback.mediumImpact();
-        onDismiss();
-      },
+      onDismissed: (_) => onDismiss(),
       child: HoloContainer(
         borderRadius: 14,
         sigmaX: 18,
         sigmaY: 18,
         color: const Color(0xFF0C1014).withValues(alpha: 0.90),
-        borderColor: AppColors.holoCyan.withValues(alpha: 0.35),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.65),
@@ -1126,11 +1284,12 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             splashColor: AppColors.holoCyan.withValues(alpha: 0.20),
             highlightColor: AppColors.holoCyan.withValues(alpha: 0.08),
-            onTap: onOpen,
+            onTap: data.hasContentIntent || !data.isSystemPackage
+                ? onOpen
+                : null,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // TOP HOLO ACCENT STRIP
                 const HoloTopGlow(height: 1.5, opacity: 0.8),
 
                 Padding(
@@ -1142,7 +1301,6 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. HEADER ROW: APP ICON, PACKAGE & CONTROLS
                       Row(
                         children: [
                           _buildAppIcon(size: 18),
@@ -1161,20 +1319,23 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                             ),
                           ),
 
+                          if (totalCount > 1) ...[
+                            _buildNotificationSwitcher(),
+                            const SizedBox(width: 7),
+                          ],
+
                           // OPEN LAUNCH GLYPH
-                          Icon(
-                            Icons.arrow_outward_rounded,
-                            size: 14,
-                            color: AppColors.holoCyan.withValues(alpha: 0.9),
-                          ),
+                          if (data.hasContentIntent || !data.isSystemPackage)
+                            Icon(
+                              Icons.arrow_outward_rounded,
+                              size: 14,
+                              color: AppColors.holoCyan.withValues(alpha: 0.9),
+                            ),
                           const SizedBox(width: 8),
 
                           // DISMISS BUTTON
                           GestureDetector(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              onDismiss();
-                            },
+                            onTap: onDismiss,
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
                               padding: const EdgeInsets.all(2.0),
@@ -1257,7 +1418,7 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   '›',
                                   style: TextStyle(
                                     color: AppColors.holoCyan,
@@ -1299,7 +1460,7 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                                   width: 3,
                                   height: 3,
                                   margin: const EdgeInsets.only(top: 5),
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     color: AppColors.holoCyan,
                                     shape: BoxShape.circle,
                                   ),
@@ -1387,15 +1548,15 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                                     alpha: 0.1,
                                   ),
                                   valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
+                                      AlwaysStoppedAnimation<Color>(
                                         AppColors.holoCyan,
                                       ),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
-                              "LIVE",
+                            Text(
+                              "Live",
                               style: TextStyle(
                                 color: AppColors.holoCyan,
                                 fontSize: 10,
@@ -1420,7 +1581,7 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                                     alpha: 0.1,
                                   ),
                                   valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
+                                      AlwaysStoppedAnimation<Color>(
                                         AppColors.holoCyan,
                                       ),
                                 ),
@@ -1429,7 +1590,7 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               "${(data.progress! * 100).toInt()}%",
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.holoCyan,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -1442,17 +1603,14 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
                       ],
 
                       // 5. NOTIFICATION ACTIONS
-                      if (data.actions.any(
-                        (action) => action.trim().isNotEmpty,
-                      )) ...[
+                      if (data.actions.isNotEmpty) ...[
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 7,
                           runSpacing: 7,
                           children: [
-                            for (var i = 0; i < data.actions.length; i++)
-                              if (data.actions[i].trim().isNotEmpty)
-                                _buildActionButton(i, data.actions[i].trim()),
+                            for (final action in data.actions)
+                              _buildActionButton(action),
                           ],
                         ),
                       ],
@@ -1467,7 +1625,65 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(int index, String label) {
+  Widget _buildNotificationSwitcher() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: AppColors.holoCyan.withValues(alpha: 0.25),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildSwitcherButton(
+            icon: Icons.keyboard_arrow_up_rounded,
+            onTap: onPrevious,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(
+              '${currentIndex + 1}/$totalCount',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.65),
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'monospace',
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          _buildSwitcherButton(
+            icon: Icons.keyboard_arrow_down_rounded,
+            onTap: onNext,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitcherButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(1.5),
+        child: Icon(
+          icon,
+          size: 14,
+          color: AppColors.holoCyan.withValues(alpha: 0.85),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(NotificationAction action) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 180),
       child: TextButton(
@@ -1485,9 +1701,9 @@ class _HoloOngoingNotificationCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
-        onPressed: () => onActionTap(index),
+        onPressed: () => onActionTap(action.index),
         child: Text(
-          label.toUpperCase(),
+          action.title.toUpperCase(),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
@@ -1601,7 +1817,7 @@ class _NotificationChronometerState extends State<_NotificationChronometer> {
         const SizedBox(width: 5),
         Text(
           _formatDuration(duration),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.holoCyan,
             fontSize: 10,
             fontWeight: FontWeight.w700,
@@ -1639,17 +1855,17 @@ class _HoloRestoreConsole extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.unfold_more_rounded,
-              size: 14,
+            Icon(
+              Icons.expand,
+              size: 20,
               color: AppColors.holoCyan,
             ),
             const SizedBox(width: 7),
             Text(
-              "STATUS STREAM HIDDEN // TAP TO RESTORE",
+              "App Activity Minimized",
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.75),
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8,
               ),

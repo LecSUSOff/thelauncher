@@ -170,7 +170,7 @@ class _YouHubState extends State<YouHub> {
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
-                                      return const Center(
+                                      return Center(
                                         child: CircularProgressIndicator(
                                           color: AppColors.holoCyan,
                                         ),
@@ -193,7 +193,7 @@ class _YouHubState extends State<YouHub> {
                                           children: [
                                             Row(
                                               children: [
-                                                const Icon(
+                                                Icon(
                                                   Icons.location_on_rounded,
                                                   size: 16,
                                                   color: AppColors.holoCyan,
@@ -257,7 +257,7 @@ class _YouHubState extends State<YouHub> {
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
-                                      return const Center(
+                                      return Center(
                                         child: CircularProgressIndicator(
                                           color: AppColors.holoCyan,
                                           strokeWidth: 2,
@@ -383,7 +383,7 @@ class _YouHubState extends State<YouHub> {
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
-                                      return const Center(
+                                      return Center(
                                         child: CircularProgressIndicator(
                                           color: AppColors.holoCyan,
                                           strokeWidth: 2,

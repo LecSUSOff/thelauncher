@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import 'package:system_theme/system_theme.dart';
 
 /// Horizontal cyan gradient divider used between holo sections.
 class GlowDivider extends StatelessWidget {
@@ -24,7 +25,7 @@ class GlowDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final glowColor = color ?? AppColors.holoCyan;
+    final glowColor = color ?? SystemTheme.accentColor.accent;
 
     return Container(
       height: height,
@@ -32,9 +33,9 @@ class GlowDivider extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.transparent,
+            glowColor.withValues(alpha: 0),
             glowColor.withValues(alpha: opacity),
-            Colors.transparent,
+            glowColor.withValues(alpha: 0),
           ],
         ),
         boxShadow: glow

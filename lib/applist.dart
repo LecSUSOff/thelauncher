@@ -16,7 +16,9 @@ class AppList extends StatefulWidget {
   final List<AppInfo> apps;
   final List<AppInfo> pinnedApps;
   final List<AppInfo> blockedApps;
+  final List<AppInfo> lockedApps;
   final ValueChanged<AppInfo> onTogglePin;
+  final ValueChanged<AppInfo> onToggleLock;
   final ValueChanged<AppInfo> onToggleBlock;
 
   const AppList({
@@ -24,8 +26,10 @@ class AppList extends StatefulWidget {
     required this.apps,
     required this.pinnedApps,
     required this.blockedApps,
+    required this.lockedApps,
     required this.onTogglePin,
     required this.onToggleBlock,
+    required this.onToggleLock,
   });
 
   @override
@@ -118,7 +122,7 @@ class _AppListState extends State<AppList> {
                       letterSpacing: 0.3,
                     ),
                   ),
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.search_rounded,
                     color: AppColors.holoCyan,
                     size: 22,
@@ -149,7 +153,7 @@ class _AppListState extends State<AppList> {
                   trailing: [
                     if (_searchQuery.isNotEmpty)
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
                           color: AppColors.holoCyan,
                           size: 20,
@@ -214,8 +218,12 @@ class _AppListState extends State<AppList> {
                         isBlocked: widget.blockedApps.any(
                           (a) => a.packageName == app.packageName,
                         ),
+                        isLocked: widget.lockedApps.any(
+                          (a) => a.packageName == app.packageName,
+                        ),
                         onTogglePin: widget.onTogglePin,
                         onToggleBlock: widget.onToggleBlock,
+                        onToggleLock: widget.onToggleLock,
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,

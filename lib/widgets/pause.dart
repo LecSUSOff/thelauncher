@@ -211,7 +211,7 @@ class _PauseScreenState extends State<PauseScreen> {
                                     ),
                                   ),
                                   onPressed: _stepBack,
-                                  child: const Text(
+                                  child: Text(
                                     "Nevermind",
                                     style: TextStyle(
                                       color: AppColors.holoCyan,

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:system_theme/system_theme.dart';
 
 /// Core design constants used throughout the app
 class AppColors {
-  static const Color holoCyan = Color(0xFF33B5E5);
+  static Color holoCyan = SystemTheme.accentColor.accent;
   static const Color holoSurface = Color(0xCC181B20);
 }
 

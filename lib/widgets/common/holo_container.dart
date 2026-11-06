@@ -1,8 +1,8 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import 'package:system_theme/system_theme.dart';
 
-/// Frosted "holo" surface shared by every large panel in the launcher.
 class HoloContainer extends StatelessWidget {
   final Widget child;
   final double borderRadius;
@@ -51,7 +51,7 @@ class HoloContainer extends StatelessWidget {
               borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(
                 color:
-                    borderColor ?? AppColors.holoCyan.withValues(alpha: 0.22),
+                    borderColor ?? SystemTheme.accentColor.accent.withAlpha(122),
                 width: borderWidth,
               ),
             ),
@@ -63,7 +63,6 @@ class HoloContainer extends StatelessWidget {
   }
 }
 
-/// Signature 2px cyan rim light shown at the top of holo panels.
 class HoloTopGlow extends StatelessWidget {
   final double height;
   final double opacity;
@@ -78,7 +77,7 @@ class HoloTopGlow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final glowColor = (color ?? AppColors.holoCyan).withValues(alpha: opacity);
+    final glowColor = (color ?? SystemTheme.accentColor.accent).withValues(alpha: opacity);
 
     return Container(
       height: height,

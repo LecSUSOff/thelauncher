@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thelauncher/widgets/pause.dart';
+import 'package:biometric_authorization/biometric_authorization.dart';
+import 'package:biometric_authorization/biometric_type.dart';
 
 class AppService {
   static Future<List<AppInfo>> getInstalledApps() async {
@@ -32,6 +34,14 @@ class AppService {
     BuildContext context,
     String packageName,
   ) async {
+    final biometricAuth = BiometricAuthorization();
+
+    bool isAvailable = await biometricAuth.isBiometricAvailable();
+
+    bool isEnrolled = await biometricAuth.isBiometricEnrolled();
+
+    List<BiometricType> types = await biometricAuth.getAvailableBiometricTypes();
+
     if (await isAppBlocked(packageName)) {
       if (!context.mounted) return;
 
@@ -44,6 +54,17 @@ class AppService {
         ),
       );
       return;
+    }
+
+    if (await isAppLocked(packageName)) {
+      bool authenticated = await biometricAuth.authenticate(
+        reason: 'The app is locked',
+        title: 'Please authenticate to access the app',
+        confirmText: 'Open',
+        useCustomUI: true,
+      );
+
+      if (!authenticated) return;
     }
 
     InstalledApps.startApp(packageName);
@@ -68,12 +89,25 @@ class AppService {
     return prefs.getStringList('blocked_apps') ?? [];
   }
 
+  static Future<List<String>> getLockedPackages() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('locked_apps') ?? [];
+  }
+
   static Future<bool> isAppBlocked(String packageName) async =>
       (await getBlockedPackages()).contains(packageName);
+
+  static Future<bool> isAppLocked(String packageName) async =>
+      (await getLockedPackages()).contains(packageName);
 
   static Future<void> saveBlockedPackages(List<String> packages) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('blocked_apps', packages);
+  }
+
+  static Future<void> saveLockedPackages(List<String> packages) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('locked_apps', packages);
   }
 
   static Future<List<String>> getSavedWidgets() async {

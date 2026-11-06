@@ -1,13 +1,18 @@
+import 'dart:ui' as math hide Stack;
+import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 import 'package:device_wallpaper_flutter/device_wallpaper_flutter.dart';
 import 'package:flutter/services.dart';
+import 'package:math_expressions/math_expressions.dart' hide Stack;
 import 'home.dart';
 import 'applist.dart';
 import 'youhub.dart';
 import 'perch.dart';
 import 'core/services/app_service.dart';
 import 'core/constants.dart';
+import 'package:system_theme/system_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,9 +57,12 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
   Uint8List? _wallpaperBytes;
   List<AppInfo> _pinnedApps = [];
   List<AppInfo> _blockedApps = [];
+  List<AppInfo> _lockedApps = [];
   List<String> _userWidgets = [];
   List<AppInfo> _allApps = [];
   bool _isLoading = true;
+
+  final glowColor = SystemTheme.accentColor.accent;
 
   final PageController _rootPageController = PageController(initialPage: 1);
 
@@ -87,10 +95,13 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
     final allApps = await AppService.getInstalledApps();
     final savedPackages = await AppService.getPinnedPackages();
     final blockedPackages = await AppService.getBlockedPackages();
+    final lockedPackages = await AppService.getLockedPackages();
     final savedWidgets = await AppService.getSavedWidgets();
-
     final blockedApps = await AppService.getAppsInfoFromPackageNames(
       blockedPackages,
+    );
+    final lockedApps = await AppService.getAppsInfoFromPackageNames(
+      lockedPackages,
     );
 
     List<String> packagesToUse = savedPackages;
@@ -109,6 +120,7 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
         _allApps = allApps;
         _pinnedApps = pinned;
         _blockedApps = blockedApps;
+        _lockedApps = lockedApps;
         _userWidgets = savedWidgets;
         _isLoading = false;
       });
@@ -155,6 +167,19 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
     );
   }
 
+  void toggleLockApp(AppInfo app) {
+    setState(() {
+      if (_lockedApps.any((a) => a.packageName == app.packageName)) {
+        _lockedApps.removeWhere((a) => a.packageName == app.packageName);
+      } else {
+        _lockedApps.add(app);
+      }
+    });
+    AppService.saveLockedPackages(
+      _lockedApps.map((a) => a.packageName).toList(),
+    );
+  }
+
   Future<void> _getCurrentWallpaper() async {
     try {
       Uint8List? bytes = await DeviceWallpaperFlutter.getWallpaper();
@@ -167,6 +192,8 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
       // Silent fail to maintain same behavior
     }
   }
+
+  double _launcherBlur = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -208,34 +235,56 @@ class _LauncherHomeScreenState extends State<LauncherHomeScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 30, bottom: 65),
-                child: GestureDetector(
-                  onVerticalDragUpdate: (details) {
-                    if (details.primaryDelta! > 2) {
-                      homeChannel.invokeMethod('openNotifications');
-                    }
-                  },
-                  child: PageView(
-                    controller: _rootPageController,
-                    physics: const BouncingScrollPhysics(),
-                    children: [
-                      const YouHub(),
-                      HomePage(
-                        pinnedApps: _pinnedApps,
-                        blockedApps: _blockedApps,
-                        onTogglePin: togglePinApp,
-                        onToggleBlock: toggleBlockApp,
-                        userWidgets: _userWidgets,
-                        onAddWidget: saveWidget,
-                        onRemoveWidget: removeWidget,
+                child: ColorFiltered(
+                  colorFilter: ColorFilter.mode(
+                    glowColor.withAlpha(clampDouble(_launcherBlur/1.5, 0, 50).round()),
+                    BlendMode.overlay
+                  ),
+                  child: ImageFiltered(
+                    imageFilter: math.ImageFilter.blur(sigmaX: _launcherBlur, sigmaY: _launcherBlur),
+                    child: GestureDetector(
+                      onVerticalDragUpdate: (details) {
+                        setState(() {
+                          _launcherBlur = _launcherBlur + (details.primaryDelta ?? 0) * 2.5;
+                        });
+                        if (details.primaryDelta! > 10) {
+                          HapticFeedback.mediumImpact();
+                          homeChannel.invokeMethod('openNotifications');
+                        }
+                      },
+                      onVerticalDragEnd: (_) {
+                        setState(() {
+                          _launcherBlur = 0.0;
+                        });
+                      },
+                      child: PageView(
+                        controller: _rootPageController,
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          const YouHub(),
+                          HomePage(
+                            pinnedApps: _pinnedApps,
+                            blockedApps: _blockedApps,
+                            lockedApps: _lockedApps,
+                            onTogglePin: togglePinApp,
+                            onToggleBlock: toggleBlockApp,
+                            onToggleLock: toggleLockApp,
+                            userWidgets: _userWidgets,
+                            onAddWidget: saveWidget,
+                            onRemoveWidget: removeWidget,
+                          ),
+                          AppList(
+                            apps: _allApps,
+                            pinnedApps: _pinnedApps,
+                            blockedApps: _blockedApps,
+                            lockedApps: _lockedApps,
+                            onTogglePin: togglePinApp,
+                            onToggleBlock: toggleBlockApp,
+                            onToggleLock: toggleLockApp,
+                          ),
+                        ],
                       ),
-                      AppList(
-                        apps: _allApps,
-                        pinnedApps: _pinnedApps,
-                        blockedApps: _blockedApps,
-                        onTogglePin: togglePinApp,
-                        onToggleBlock: toggleBlockApp,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

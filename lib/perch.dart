@@ -236,7 +236,7 @@ class _PerchScreenState extends State<PerchScreen> {
                         width: 72,
                         height: 72,
                         color: Colors.white.withValues(alpha: 0.05),
-                        child: const Icon(
+                        child: Icon(
                           Icons.music_note_rounded,
                           size: 36,
                           color: AppColors.holoCyan,
@@ -247,7 +247,7 @@ class _PerchScreenState extends State<PerchScreen> {
                       width: 72,
                       height: 72,
                       color: Colors.white.withValues(alpha: 0.05),
-                      child: const Icon(
+                      child: Icon(
                         Icons.music_note_rounded,
                         size: 36,
                         color: AppColors.holoCyan,
@@ -266,12 +266,12 @@ class _PerchScreenState extends State<PerchScreen> {
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             mediaInfo!.artist.toUpperCase(),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.0,
